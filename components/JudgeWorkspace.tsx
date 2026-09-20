@@ -7,6 +7,7 @@ import type { JevErrorPayload } from "@/types/jev";
 import { JevApiError } from "@/types/jev";
 import type { AxisResult, JudgmentStatus } from "@/types/results";
 import { BUILT_IN_AXES } from "@/lib/builtInAxes";
+import { splitSentences } from "@/lib/evidenceHeuristic";
 import { runJudgmentDetailed } from "@/lib/judge";
 import { buildSummary } from "@/lib/results";
 import { SAMPLE_TEXT } from "@/lib/sampleText";
@@ -282,15 +283,22 @@ export function JudgeWorkspace() {
           onRetry={() => void run()}
           canRun={!!text.trim() && selectedAxes.length > 0}
           onChangeKey={openKeyDialog}
-          onLocateEvidence={(snippet, trigger, name) => {
+          onLocateEvidence={(evidence, trigger, name) => {
             const editor = document.getElementById("judge-text") as HTMLTextAreaElement | null;
             if (!editor) return;
-            const start = editor.value.indexOf(snippet);
-            if (start < 0) return;
+            const sentences = splitSentences(editor.value);
+            if (sentences[evidence.index] !== evidence.snippet) return;
+            let start = 0;
+            let end = 0;
+            for (let index = 0; index <= evidence.index; index++) {
+              start = editor.value.indexOf(sentences[index], end);
+              if (start < 0) return;
+              end = start + sentences[index].length;
+            }
             const target = trigger.closest(".result-card")?.querySelector<HTMLElement>(":scope > summary");
             if (target) setEvidenceReturn({ target, name, signature, runId });
             focusWriting();
-            editor.setSelectionRange(start, start + snippet.length);
+            editor.setSelectionRange(start, end);
           }}
           demoMode={demoMode}
           resultsSimulated={resultsSimulated}

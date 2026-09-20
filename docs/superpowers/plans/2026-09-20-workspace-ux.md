@@ -40,7 +40,7 @@ Verification receipts:
 - `pnpm typecheck`: passed.
 - `pnpm test`: 74 tests passed across 10 files.
 - `pnpm build`: passed with Next.js 16.3.5.
-- `pnpm test:e2e --workers=4`: 86 passed, 5 expected platform-specific skips.
+- `pnpm test:e2e --workers=4`: 88 passed, 5 expected platform-specific skips.
 - `git diff --check`: passed.
 
 Requirement evidence:
@@ -59,6 +59,11 @@ raw probability details, check previews, Undo, custom checks, dialogs, errors,
 reference pages, and mobile navigation. Independent code review found no material
 regressions. Evidence return targets are cleared on edits, check changes, and new
 runs; a mode mismatch also makes the target unavailable.
+
+PR review found that duplicate evidence sentences selected the first occurrence.
+A desktop/mobile regression reproduced that failure, then passed after evidence
+navigation was changed to follow the selected sentence index. The complete local
+verification suite passed again after the fix.
 
 Limits: live-mode tests use a stubbed provider. No real provider calls, manual
 VoiceOver acceptance, or human keyboard-only acceptance were performed. Existing

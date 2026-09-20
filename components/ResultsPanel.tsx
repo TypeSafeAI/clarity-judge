@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, LoaderCircle } from "lucide-react";
 import { isFlagged } from "@/lib/results";
 import { explainError } from "@/lib/errors";
-import type { AxisResult, JudgmentStatus, Summary } from "@/types/results";
+import type { AxisResult, Evidence, JudgmentStatus, Summary } from "@/types/results";
 import type { JevErrorPayload } from "@/types/jev";
 import { AxisResultCard } from "./AxisResultCard";
 import { SummaryMetrics } from "./SummaryMetrics";
@@ -22,7 +22,7 @@ type Props = {
   onRetry: () => void;
   canRun: boolean;
   onChangeKey: () => void;
-  onLocateEvidence: (snippet: string, trigger: HTMLButtonElement, name: string) => void;
+  onLocateEvidence: (evidence: Evidence, trigger: HTMLButtonElement, name: string) => void;
   demoMode: boolean;
   /** True when the results on screen came from the mock, whatever the mode is now. */
   resultsSimulated: boolean;
@@ -186,7 +186,7 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
                   index={i}
                   expanded={isOpen(result)}
                   onToggle={() => toggleOne(result.axis.id)}
-                  onLocateEvidence={stale || running ? undefined : (snippet, trigger) => onLocateEvidence(snippet, trigger, result.axis.name)}
+                  onLocateEvidence={stale || running ? undefined : (evidence, trigger) => onLocateEvidence(evidence, trigger, result.axis.name)}
                 />
               ))}
               {visibleResults.length === 0 && <p className="filter-empty">No verdicts match this filter.</p>}

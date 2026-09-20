@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, CircleCheck, CircleHelp, Flag, TriangleAlert } from "lucide-react";
-import type { AxisResult } from "@/types/results";
+import type { AxisResult, Evidence } from "@/types/results";
 import { formatPercent, isFlagged } from "@/lib/results";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   index?: number;
   expanded: boolean;
   onToggle: () => void;
-  onLocateEvidence?: (snippet: string, trigger: HTMLButtonElement) => void;
+  onLocateEvidence?: (evidence: Evidence, trigger: HTMLButtonElement) => void;
 };
 
 type Outcome = "issue" | "pass" | "review";
@@ -71,7 +71,7 @@ export function AxisResultCard({ result, threshold, index = 0, expanded, onToggl
             <blockquote>&ldquo;{result.evidence.snippet}&rdquo;</blockquote>
             <figcaption>
               Sentence {result.evidence.index + 1} of {result.evidence.total} · {result.evidence.approximate ? "approximate, matched locally by keywords" : "picked by Jev"}
-              {onLocateEvidence && <button type="button" className="evidence-locate" onClick={(event) => onLocateEvidence(result.evidence!.snippet, event.currentTarget)}>Find in writing</button>}
+              {onLocateEvidence && <button type="button" className="evidence-locate" onClick={(event) => onLocateEvidence(result.evidence!, event.currentTarget)}>Find in writing</button>}
             </figcaption>
           </figure>
         )}

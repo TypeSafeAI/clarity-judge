@@ -52,6 +52,31 @@ test("live results keep missing answers distinct from a low-confidence pass", as
   expect(requests).toHaveLength(1);
 });
 
+test("evidence navigation selects the provider's later duplicate sentence", async ({ page }) => {
+  await openJudge(page);
+  await page.route("**/api/judge", (route) => {
+    const evidenceRequest = route.request().postDataJSON().questions[0].type === "choice";
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      answers: [{ id: "hedging", type: evidenceRequest ? "choice" : "noul", value: evidenceRequest ? "s3" : true, probability: 0.9, confidence: 0.9, needsReview: false }],
+      model: "mock-live",
+    }) });
+  });
+  await page.getByRole("button", { name: "API key settings" }).click();
+  await keyInput(page).fill(FAKE_KEY);
+  await page.getByRole("button", { name: "Save key", exact: true }).click();
+  await page.keyboard.press("Escape");
+  const duplicate = "Perhaps we should wait.";
+  const text = `${duplicate} A direct decision follows.\n\n${duplicate}`;
+  const editor = page.getByLabel("Paste the text to judge");
+  await editor.fill(text);
+  await page.getByRole("button", { name: "Run judgment", exact: false }).click();
+  const card = resultCards(page).first();
+  await expect(card.locator("figcaption")).toContainText("Sentence 3 of 3 · picked by Jev");
+  await card.getByRole("button", { name: "Find in writing" }).click();
+  await expect(editor).toBeFocused();
+  expect(await editor.evaluate((element: HTMLTextAreaElement) => [element.selectionStart, element.selectionEnd])).toEqual([text.lastIndexOf(duplicate), text.length]);
+});
+
 test("clear, sample, and example replacements can be undone without storing drafts", async ({ page }) => {
   await openJudge(page);
   const editor = page.getByLabel("Paste the text to judge");
