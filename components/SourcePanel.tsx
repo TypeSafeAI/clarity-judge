@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, FileText, ListChecks, Plus } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Axis } from "@/types/axis";
 import { splitSentences } from "@/lib/evidenceHeuristic";
 import { WRITING_EXAMPLES } from "@/lib/sampleText";
@@ -27,6 +27,9 @@ type Props = {
   onSelectAll: (select: boolean) => void;
   onAddCustom: (axis: Axis) => void;
   onRemoveCustom: (id: string) => void;
+  onUpdateCustom: (axis: Axis) => void;
+  removedCheckName?: string;
+  onUndoRemoveCustom: () => void;
   demoMode: boolean;
   running: boolean;
   onRun: () => void;
@@ -53,12 +56,26 @@ export function SourcePanel({
   onSelectAll,
   onAddCustom,
   onRemoveCustom,
+  onUpdateCustom,
+  removedCheckName,
+  onUndoRemoveCustom,
   demoMode,
   running,
   onRun,
   runHint,
 }: Props) {
   const [examplesOpen, setExamplesOpen] = useState(true);
+  const [editingAxis, setEditingAxis] = useState<Axis | null>(null);
+  const editTrigger = useRef<HTMLButtonElement | null>(null);
+  const undoRemoval = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  function finishEditing() {
+    setEditingAxis(null);
+    requestAnimationFrame(() => {
+      if (editTrigger.current?.isConnected) editTrigger.current.focus();
+      else panelRef.current?.querySelector<HTMLButtonElement>(".chip-info")?.focus();
+    });
+  }
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const sentences = splitSentences(text).length;
   const total = builtInAxes.length + customAxes.length;
@@ -66,7 +83,7 @@ export function SourcePanel({
   const allSelected = selected === total && total > 0;
 
   return (
-    <section className="panel source-panel" aria-labelledby="source-title">
+    <section ref={panelRef} className="panel source-panel" aria-labelledby="source-title">
       <div className="panel-heading">
         <div>
           <FileText size={18} strokeWidth={1.5} />
@@ -78,7 +95,7 @@ export function SourcePanel({
         </div>
       </div>
 
-      <div className="panel-content grow">
+      <div className="panel-content grow" role="region" aria-label="Writing and checks" tabIndex={0}>
         <div className="replacement-feedback">
           <p role="status" aria-atomic="true">{replacementMessage}</p>
           {canUndo && <button type="button" className="button small" disabled={running} onClick={onUndo} aria-label="Undo replacement">Undo</button>}
@@ -123,7 +140,21 @@ export function SourcePanel({
               {selected}/{total} on
             </span>
           </div>
-          <CheckChips builtInAxes={builtInAxes} customAxes={customAxes} selectedIds={selectedIds} onToggle={onToggle} onRemoveCustom={onRemoveCustom} />
+          <CheckChips builtInAxes={builtInAxes} customAxes={customAxes} selectedIds={selectedIds} onToggle={onToggle} onRemoveCustom={(id) => {
+            if (editingAxis?.id === id) setEditingAxis(null);
+            onRemoveCustom(id);
+            requestAnimationFrame(() => undoRemoval.current?.focus());
+          }} onEditCustom={(axis, trigger) => { editTrigger.current = trigger; setEditingAxis(axis); }} />
+          <div className="replacement-feedback">
+            <p role="status" aria-atomic="true">{removedCheckName ? `Removed ${removedCheckName}.` : ""}</p>
+            {removedCheckName && <button ref={undoRemoval} type="button" className="button small" aria-label="Undo check removal" onClick={() => {
+              onUndoRemoveCustom();
+              requestAnimationFrame(() => {
+                const button = Array.from(panelRef.current?.querySelectorAll<HTMLButtonElement>(".chip-info") ?? []).find((element) => element.getAttribute("aria-label") === `About ${removedCheckName}`);
+                button?.focus();
+              });
+            }}>Undo</button>}
+          </div>
           <div className="chip-actions">
             <span className="field-hint" style={{ margin: 0 }}>
               Use a check&apos;s info button to preview its question and what counts as an issue.
@@ -133,7 +164,12 @@ export function SourcePanel({
             </button>
           </div>
 
-          <details className="disclosure card">
+          {editingAxis ? (
+            <section className="check-editor disclosure card" aria-label={`Edit ${editingAxis.name}`}>
+              <h3>Edit {editingAxis.name}</h3>
+              <CustomAxisBuilder key={editingAxis.id} initialAxis={editingAxis} onAdd={(axis) => { onUpdateCustom(axis); finishEditing(); }} onCancel={finishEditing} />
+            </section>
+          ) : <details className="disclosure card">
             <summary>
               <Plus size={14} />
               Add a custom check
@@ -142,7 +178,7 @@ export function SourcePanel({
             <div className="disclosure-body">
               <CustomAxisBuilder onAdd={onAddCustom} />
             </div>
-          </details>
+          </details>}
 
           <details className="disclosure method-disclosure">
             <summary>How judgments work <ChevronDown size={14} className="marker" aria-hidden /></summary>

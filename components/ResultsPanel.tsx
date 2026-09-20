@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, LoaderCircle } from "lucide-react";
+import { compareResult } from "@/lib/comparison";
 import { isFlagged } from "@/lib/results";
 import { explainError } from "@/lib/errors";
 import type { AxisResult, Evidence, JudgmentStatus, Summary } from "@/types/results";
@@ -12,6 +13,7 @@ import { Empty, Export } from "./ui";
 
 type Props = {
   status: JudgmentStatus;
+  previousRun: { results: AxisResult[]; simulated: boolean } | null;
   results: AxisResult[];
   summary: Summary | null;
   error: JevErrorPayload | null;
@@ -32,7 +34,7 @@ type Props = {
 };
 
 /** Right panel: the verdicts, one card per check, plus the threshold. */
-export function ResultsPanel({ status, results, summary, error, stale, threshold, onThresholdChange, onRetry, canRun, onChangeKey, onLocateEvidence, demoMode, resultsSimulated, runId, exportData }: Props) {
+export function ResultsPanel({ status, previousRun, results, summary, error, stale, threshold, onThresholdChange, onRetry, canRun, onChangeKey, onLocateEvidence, demoMode, resultsSimulated, runId, exportData }: Props) {
   const explained = error ? explainError(error) : null;
   const [filter, setFilter] = useState<"all" | "issues" | "review" | "passed">("all");
   const visibleResults = results.filter((result) =>
@@ -70,31 +72,30 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
     setOverride({ runId, ids });
   }
 
-  const running = status === "running";
+  const running = status === "running" || status === "evidence";
+  const evaluating = status === "running";
   // One polite announcement per state change, instead of narrating the whole panel.
-  const announcement = running
-    ? "Judging. Asking Jev."
-    : status === "error" && explained
-      ? `Run failed. ${explained.title}.`
-      : status === "done" && summary
-        ? `Judgment complete. ${summary.takeaway}`
-        : "";
+  const announcement = evaluating
+    ? demoMode ? "Evaluating checks · simulated locally." : "Evaluating checks · one verdict request."
+    : status === "evidence"
+      ? "Finding evidence · verdicts are ready; showing approximate matches for now."
+      : status === "error" && explained
+        ? `Run failed. ${explained.title}.`
+        : status === "done" && summary
+          ? `Judgment complete. ${summary.takeaway}`
+          : "";
 
   return (
     <section className="panel" aria-labelledby="results-title">
       <div className="panel-heading">
         <div>
           <h2 id="results-title" tabIndex={-1}>Verdicts</h2>
-          {summary && (
-            <span className={`count ${summary.issues === 0 && summary.flagged === 0 ? "good" : "accent"}`}>
-              {summary.passed}/{summary.total} passed
-            </span>
-          )}
         </div>
         <Export data={exportData} name="clarity-judge.json" />
       </div>
 
-      <p className="sr-only" role="status" aria-live="polite">
+      <p className={running ? "status-line run-progress" : "sr-only"} role="status" aria-live="polite">
+        {running && <LoaderCircle size={14} className="spin" aria-hidden />}
         {announcement}
       </p>
       <div className="panel-content scroll">
@@ -144,29 +145,30 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
           </div>
         )}
 
-        {running && (
-          <p className="status-line" role="status">
-            <LoaderCircle size={14} className="spin" />
-            Asking Jev · all checks in one batched verdict request
-          </p>
-        )}
-
         {status === "idle" && results.length === 0 && (
           <Empty title="Nothing judged yet.">Pick your checks and press Run judgment to see a verdict, a confidence, and the evidence for each one.</Empty>
         )}
 
         {results.length > 0 && summary && (
-          <div style={{ opacity: running ? 0.5 : 1, transition: "opacity 150ms" }}>
+          <div style={{ opacity: evaluating ? 0.5 : 1, transition: "opacity 150ms" }}>
             <SummaryMetrics summary={summary} simulated={resultsSimulated} />
 
-            <div className="result-filters" role="group" aria-label="Filter verdicts" aria-describedby="review-filter-help">
+            <div className="result-filters" role="group" aria-label="Filter verdicts">
               {(["all", "issues", "review", "passed"] as const).map((option) => (
                 <button key={option} type="button" className="result-filter" aria-pressed={filter === option} onClick={() => setFilter(option)}>
                   {option === "all" ? "All" : option === "issues" ? "Issues" : option === "review" ? "Needs review" : "Passed"} <span>{filterCounts[option]}</span>
                 </button>
               ))}
             </div>
-            <p id="review-filter-help" className="field-hint">Needs review includes low-confidence passes and issues, plus checks without a usable answer.</p>
+            <details className="filter-explanation">
+              <summary>What needs review?</summary>
+              <p id="review-filter-help" className="field-hint">Needs review includes low-confidence passes and issues, plus checks without a usable answer.</p>
+            </details>
+            {previousRun && !evaluating && (
+              <p className="comparison-note">{previousRun.simulated !== resultsSimulated
+                ? "Demo and live runs are not compared."
+                : `Compared with previous ${resultsSimulated ? "demo" : "live"} run`}</p>
+            )}
 
             <div className="results-toolbar">
               <span className="muted">
@@ -182,6 +184,7 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
                 <AxisResultCard
                   key={`${runId}-${result.axis.id}`}
                   result={result}
+                  comparison={!evaluating && previousRun && previousRun.simulated === resultsSimulated ? compareResult(result, previousRun.results, threshold) : undefined}
                   threshold={threshold}
                   index={i}
                   expanded={isOpen(result)}

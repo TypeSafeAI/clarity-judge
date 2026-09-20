@@ -11,11 +11,9 @@ test.describe("judge workspace in demo mode", () => {
 
     const cards = resultCards(page);
     await expect(cards).toHaveCount(7);
-    await expect(page.locator(".verdict-summary h2")).toHaveText(
-      "3 of 7 checks passed. Review hedging language, em dash usage, filler phrases, and passive voice overuse. 1 check is low-confidence and worth a second look.",
-    );
+    await expect(page.locator(".verdict-summary h3")).toHaveText("Review the highlighted checks.");
     await expect(page.locator(".verdict-summary .summary-note")).toContainText("Simulated");
-    await expect(page.locator(".panel-heading .count").filter({ hasText: "passed" })).toHaveText("3/7 passed");
+    await expect(page.getByRole("button", { name: "Passed 3", exact: true })).toBeVisible();
 
     // The first card is the hedging issue, open by default because it is an issue.
     const first = cards.first();
@@ -31,8 +29,8 @@ test.describe("judge workspace in demo mode", () => {
 
   test("threshold slider re-flags locally without a new run", async ({ page }) => {
     await openJudge(page);
-    const flagged = page.locator(".summary-metrics strong.flag");
-    await expect(flagged).toHaveText("1");
+    const flagged = page.getByRole("button", { name: /^Needs review/ });
+    await expect(flagged).toHaveText("Needs review 1");
 
     const requests: string[] = [];
     page.on("request", (r) => r.url().includes("/api/judge") && requests.push(r.url()));
@@ -42,7 +40,7 @@ test.describe("judge workspace in demo mode", () => {
     // 70% -> 95% flags the 93%, 86%, and 75% results too.
     for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
     await expect(page.locator(".threshold label strong")).toHaveText("95%");
-    await expect(flagged).toHaveText("4");
+    await expect(flagged).toHaveText("Needs review 4");
     expect(requests).toHaveLength(0);
   });
 

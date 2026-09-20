@@ -186,6 +186,21 @@ describe("runJudgmentDetailed in live mode", () => {
     return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   }
 
+  it("publishes primary verdicts before a delayed evidence response", async () => {
+    let release!: (response: Response) => void;
+    const evidence = new Promise<Response>((resolve) => { release = resolve; });
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ answers: [{ id: "hedging", type: "noul", value: true, probability: 0.9, confidence: 0.9, needsReview: false }] }))
+      .mockReturnValueOnce(evidence));
+    const onVerdicts = vi.fn();
+    const run = runJudgmentDetailed("Perhaps we wait. Decide Friday.", [hedging], { demoMode: false, jevEvidence: true, onVerdicts });
+    await vi.waitFor(() => expect(onVerdicts).toHaveBeenCalledOnce());
+    expect(onVerdicts.mock.calls[0][0].results[0]).toMatchObject({ isIssue: true, evidence: { approximate: true } });
+    expect(onVerdicts.mock.calls[0][0].evidencePending).toBe(true);
+    release(jsonResponse({ answers: [{ id: "hedging", type: "choice", value: "s2", confidence: 0.9, needsReview: false }] }));
+    expect((await run).results[0].evidence?.index).toBe(1);
+  });
+
   it("posts to /api/judge with the browser key and reads Jev's telemetry", async () => {
     const answers: JevAnswer[] = [
       { id: "hedging", type: "noul", value: true, probability: 0.9, confidence: 0.9, needsReview: false },

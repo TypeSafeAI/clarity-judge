@@ -10,10 +10,11 @@ type Props = {
   selectedIds: Set<string>;
   onToggle: (id: string) => void;
   onRemoveCustom: (id: string) => void;
+  onEditCustom: (axis: Axis, trigger: HTMLButtonElement) => void;
 };
 
 /** The checks as toggle chips, the way the playground picks fields to extract. */
-export function CheckChips({ builtInAxes, customAxes, selectedIds, onToggle, onRemoveCustom }: Props) {
+export function CheckChips({ builtInAxes, customAxes, selectedIds, onToggle, onRemoveCustom, onEditCustom }: Props) {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const previewRegionId = useId();
   const previewRef = useRef<HTMLElement>(null);
@@ -51,6 +52,7 @@ export function CheckChips({ builtInAxes, customAxes, selectedIds, onToggle, onR
       {preview && (
         <section ref={previewRef} className="check-preview" id={previewRegionId} aria-label={`${preview.name} check details`}>
           <h3>{preview.name}</h3>
+          {!preview.builtIn && <button type="button" className="button small" aria-label={`Edit ${preview.name}`} onClick={(event) => onEditCustom(preview, event.currentTarget)}>Edit check</button>}
           <p>{preview.question}</p>
           {preview.kind === "yes_no" ? (
             <p><strong>Counts as an issue:</strong> {preview.issueWhen ? "Yes" : "No"}</p>

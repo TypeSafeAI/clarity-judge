@@ -41,7 +41,7 @@ export type Summary = {
   takeaway: string;
 };
 
-export type JudgmentStatus = "idle" | "running" | "done" | "error";
+export type JudgmentStatus = "idle" | "running" | "evidence" | "done" | "error";
 
 /** Facts about the last run, shown as a readout in the header. */
 export type Telemetry = {

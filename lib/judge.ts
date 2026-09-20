@@ -20,6 +20,8 @@ export type RunOptions = {
   apiKey?: string;
   /** Live mode only: ask Jev a second, batched question to pick evidence sentences. */
   jevEvidence?: boolean;
+  /** Primary results are available before the optional evidence request finishes. */
+  onVerdicts?: (update: { results: AxisResult[]; telemetry: Telemetry; evidencePending: boolean }) => void;
 };
 
 /** Must match API_KEY_HEADER in app/api/judge/route.ts. */
@@ -217,12 +219,9 @@ export async function runJudgmentDetailed(
     model = live.model ?? "jev-latest";
   }
 
-  const jevEvidence =
-    !options.demoMode && options.jevEvidence ? await pickEvidenceWithJev(text, axes, options.apiKey) : {};
-
   const results = axes.map((axis) => {
     const answer = answers.find((a) => a.id === axis.id);
-    const evidence = jevEvidence[axis.id] ?? pickEvidence(text, axis);
+    const evidence = pickEvidence(text, axis);
     return answerToResult(axis, answer, evidence);
   });
 
@@ -236,5 +235,12 @@ export async function runJudgmentDetailed(
     at: Date.now(),
   };
 
-  return { results, telemetry };
+  const sentenceCount = splitSentences(text).length;
+  const evidencePending = !options.demoMode && !!options.jevEvidence && sentenceCount >= 2 && sentenceCount <= 100;
+  options.onVerdicts?.({ results, telemetry, evidencePending });
+  const jevEvidence = evidencePending ? await pickEvidenceWithJev(text, axes, options.apiKey) : {};
+  return {
+    results: results.map((result) => ({ ...result, evidence: jevEvidence[result.axis.id] ?? result.evidence })),
+    telemetry: { ...telemetry, latencyMs: Math.round(performance.now() - started) },
+  };
 }
