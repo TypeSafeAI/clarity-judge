@@ -5,6 +5,7 @@
   "scripts": {
     "preinstall": "npx --yes only-allow pnpm",
     "dev": "next dev",
+    "dev:1password": "node scripts/dev-1password.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
