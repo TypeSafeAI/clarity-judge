@@ -76,3 +76,21 @@ test("choice options with colliding keys cannot be saved", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "unique" })).toBeVisible();
   await expect(checkChips(page).getByRole("checkbox", { name: "Duplicate options", exact: true })).toHaveCount(0);
 });
+
+
+test("edited labels may share a slug when their preserved keys differ", async ({ page }) => {
+  const axis: Axis = { id: "custom-labels", builtIn: false, name: "Labels", description: "Labels", question: "Which label applies?", kind: "choice", options: [{ value: "first", label: "First" }, { value: "second", label: "Second" }], issueOptions: ["second"] };
+  await page.addInitScript((axis) => localStorage.setItem("clarity-judge:custom-axes", JSON.stringify([axis])), axis);
+  await openJudge(page);
+  await page.getByRole("button", { name: "About Labels", exact: true }).click();
+  await page.getByRole("button", { name: "Edit Labels", exact: true }).click();
+  await page.getByRole("textbox", { name: "Option 1 label", exact: true }).fill("On brand");
+  await page.getByRole("textbox", { name: "Option 2 label", exact: true }).fill("On brand");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "distinct label" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Option 2 label", exact: true }).fill("On-brand");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
+  const saved = await page.evaluate<Axis[]>(() => JSON.parse(localStorage.getItem("clarity-judge:custom-axes")!));
+  expect(saved[0]).toMatchObject({ id: axis.id, options: [{ value: "first", label: "On brand" }, { value: "second", label: "On-brand" }], issueOptions: ["second"] });
+});

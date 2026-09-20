@@ -49,8 +49,8 @@ export function CustomAxisBuilder({ onAdd, initialAxis, onCancel }: Props) {
   const options = editingChoice
     ? editedOptions.map((option) => ({ ...option, label: option.label.trim() }))
     : parsedOptions.map((label) => ({ value: slugify(label), label }));
-  const duplicateOptions = new Set(options.map((option) => option.value)).size !== options.length ||
-    new Set(options.map((option) => slugify(option.label))).size !== options.length;
+  const duplicateKeys = new Set(options.map((option) => option.value)).size !== options.length;
+  const duplicateLabels = new Set(options.map((option) => option.label.toLowerCase())).size !== options.length;
 
   function reset() {
     setName("");
@@ -70,7 +70,8 @@ export function CustomAxisBuilder({ onAdd, initialAxis, onCancel }: Props) {
     if (kind === "choice" && options.length < 2) return setError(editingChoice ? "Add at least two options." : "Add at least two options, one per line.");
 
     if (kind === "choice" && options.some((option) => !option.label)) return setError("Give every option a label.");
-    if (kind === "choice" && duplicateOptions) return setError("Give each option a unique name; these labels produce the same option key.");
+    if (kind === "choice" && duplicateKeys) return setError(editingChoice ? "Each option must have a unique key." : "Give each option a unique name; these labels produce the same option key.");
+    if (kind === "choice" && duplicateLabels) return setError("Give each option a distinct label.");
 
     const base = {
       id: initialAxis?.id ?? newAxisId(),
