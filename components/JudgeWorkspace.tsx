@@ -9,6 +9,7 @@ import type { AxisResult, JudgmentStatus } from "@/types/results";
 import { BUILT_IN_AXES } from "@/lib/builtInAxes";
 import { splitSentences } from "@/lib/evidenceHeuristic";
 import { runJudgmentDetailed } from "@/lib/judge";
+import { checkDefinition } from "@/lib/comparison";
 import { buildSummary } from "@/lib/results";
 import { SAMPLE_TEXT } from "@/lib/sampleText";
 import { redactSecrets } from "@/lib/redact";
@@ -43,6 +44,10 @@ export function JudgeWorkspace() {
   // Whether the results on screen came from the mock, decided when they arrived.
   const [resultsSimulated, setResultsSimulated] = useState(false);
   const autoRan = useRef(false);
+  const inFlight = useRef(false);
+  const completedRun = useRef<{ results: AxisResult[]; simulated: boolean } | null>(null);
+  const [previousRun, setPreviousRun] = useState<{ results: AxisResult[]; simulated: boolean } | null>(null);
+  const [removedCheck, setRemovedCheck] = useState<{ axis: Axis; index: number; selected: boolean } | null>(null);
 
   // localStorage only exists in the browser and the first client render must
   // match the server HTML, so saved settings load in an effect after mount.
@@ -65,10 +70,11 @@ export function JudgeWorkspace() {
   const selectedAxes = useMemo(() => allAxes.filter((axis) => selectedIds.has(axis.id)), [allAxes, selectedIds]);
 
   // What the last run was based on, so the results can say when they're stale.
-  const signature = useMemo(() => JSON.stringify([text, selectedAxes.map((a) => a.id), demoMode]), [text, selectedAxes, demoMode]);
-  const stale = !!snapshot && snapshot !== signature && status === "done";
+  const signature = useMemo(() => JSON.stringify([text, selectedAxes.map(checkDefinition), demoMode]), [text, selectedAxes, demoMode]);
+  const stale = !!snapshot && snapshot !== signature;
 
   const run = useCallback(async () => {
+    if (inFlight.current) return;
     if (!text.trim()) {
       setError({ error: "Add some text to judge first.", code: "validation" });
       setStatus("error");
@@ -79,6 +85,7 @@ export function JudgeWorkspace() {
       setStatus("error");
       return;
     }
+    inFlight.current = true;
     setStatus("running");
     setEvidenceReturn(null);
     setRunning(true);
@@ -88,13 +95,23 @@ export function JudgeWorkspace() {
         demoMode,
         apiKey: apiKey ?? undefined,
         jevEvidence: true,
+        onVerdicts: ({ results: primary, telemetry: primaryTelemetry, evidencePending }) => {
+          setPreviousRun(completedRun.current);
+          setResults(primary);
+          setResultsSimulated(primaryTelemetry.source === "simulated");
+          setTelemetry(primaryTelemetry);
+          setSnapshot(JSON.stringify([text, selectedAxes.map(checkDefinition), demoMode]));
+          setJudgedText(text);
+          setRunId((id) => id + 1);
+          setStatus(evidencePending ? "evidence" : "done");
+        },
       });
       setResults(next);
       setResultsSimulated(telemetry.source === "simulated");
       setTelemetry(telemetry);
-      setSnapshot(JSON.stringify([text, selectedAxes.map((a) => a.id), demoMode]));
+      setSnapshot(JSON.stringify([text, selectedAxes.map(checkDefinition), demoMode]));
       setJudgedText(text);
-      setRunId((id) => id + 1);
+      completedRun.current = { results: next, simulated: telemetry.source === "simulated" };
       setStatus("done");
     } catch (caught) {
       const payload: JevErrorPayload =
@@ -105,6 +122,7 @@ export function JudgeWorkspace() {
       setError({ ...payload, error: redactSecrets(payload.error) ?? payload.error, raw: redactSecrets(payload.raw) });
       setStatus("error");
     } finally {
+      inFlight.current = false;
       setRunning(false);
     }
   }, [text, selectedAxes, demoMode, apiKey, setRunning, setTelemetry]);
@@ -135,6 +153,7 @@ export function JudgeWorkspace() {
   }, [run, paletteOpen, setPaletteOpen]);
 
   function toggleAxis(id: string) {
+    if (running) return;
     setEvidenceReturn(null);
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -144,27 +163,45 @@ export function JudgeWorkspace() {
     });
   }
   function selectAll(select: boolean) {
+    if (running) return;
     setEvidenceReturn(null);
     setSelectedIds(select ? new Set(allAxes.map((a) => a.id)) : new Set());
   }
   function addCustomAxis(axis: Axis) {
+    if (running) return;
     setEvidenceReturn(null);
     setCustomAxes((prev) => [...prev, axis]);
     setSelectedIds((prev) => new Set(prev).add(axis.id));
   }
-  function removeCustomAxis(id: string) {
+  function updateCustomAxis(axis: Axis) {
+    if (running) return;
     setEvidenceReturn(null);
+    setCustomAxes((prev) => prev.map((item) => item.id === axis.id ? axis : item));
+  }
+  function undoRemoveCustomAxis() {
+    if (running || !removedCheck) return;
+    const { axis, index, selected } = removedCheck;
+    setCustomAxes((prev) => { const next = [...prev]; next.splice(index, 0, axis); return next; });
+    if (selected) setSelectedIds((prev) => new Set(prev).add(axis.id));
+    setEvidenceReturn(null);
+    setRemovedCheck(null);
+  }
+  function removeCustomAxis(id: string) {
+    if (running) return;
+    setEvidenceReturn(null);
+    const index = customAxes.findIndex((axis) => axis.id === id);
+    if (index < 0) return;
+    setRemovedCheck({ axis: customAxes[index], index, selected: selectedIds.has(id) });
     setCustomAxes((prev) => prev.filter((a) => a.id !== id));
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
       return next;
     });
-    setResults((prev) => prev.filter((r) => r.axis.id !== id));
   }
 
   const summary = useMemo(() => (results.length ? buildSummary(results, threshold) : null), [results, threshold]);
-  const running = status === "running";
+  const running = status === "running" || status === "evidence";
   const canReturnToEvidence = evidenceReturn && evidenceReturn.signature === signature && evidenceReturn.runId === runId && status === "done";
 
   function focusWriting() {
@@ -183,6 +220,7 @@ export function JudgeWorkspace() {
   }
 
   function replaceText(next: string, message: string) {
+    if (running) return;
     if (next === text) return;
     setPreviousText(text);
     setText(next);
@@ -191,6 +229,7 @@ export function JudgeWorkspace() {
   }
 
   function undoReplacement() {
+    if (running) return;
     if (previousText === null) return;
     setText(previousText);
     setPreviousText(null);
@@ -267,6 +306,9 @@ export function JudgeWorkspace() {
           onSelectAll={selectAll}
           onAddCustom={addCustomAxis}
           onRemoveCustom={removeCustomAxis}
+          onUpdateCustom={updateCustomAxis}
+          removedCheckName={removedCheck?.axis.name}
+          onUndoRemoveCustom={undoRemoveCustomAxis}
           demoMode={demoMode}
           running={running}
           onRun={() => void run()}
@@ -274,6 +316,7 @@ export function JudgeWorkspace() {
         />
         <ResultsPanel
           status={status}
+          previousRun={previousRun}
           results={results}
           summary={summary}
           error={error}

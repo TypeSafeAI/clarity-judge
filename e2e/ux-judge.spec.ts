@@ -11,6 +11,7 @@ test("uncertainty labels distinguish the verdict, confidence, and raw yes probab
   await expect(pass.getByRole("meter")).toHaveCount(0);
   await pass.getByText("Details", { exact: true }).click();
   await expect(pass.getByRole("meter", { name: /Probability of yes/ })).toBeVisible();
+  await page.getByText("What needs review?", { exact: true }).click();
   await expect(page.getByText("Needs review includes low-confidence passes and issues, plus checks without a usable answer.")).toBeVisible();
   await page.getByRole("button", { name: "Passed 3", exact: true }).click();
   await expect(pass).toBeVisible();
@@ -42,7 +43,7 @@ test("live results keep missing answers distinct from a low-confidence pass", as
   await expect(missing.locator(".result-score")).toHaveText("—");
   await expect(missing).not.toContainText("low confidence");
   await expect(page.locator(".verdict-summary .summary-note")).not.toContainText("Simulated");
-  await expect(page.locator(".verdict-summary h2")).toContainText("6 checks have no usable answer");
+  await expect(page.getByRole("status").filter({ hasText: "Judgment complete" })).toContainText("6 checks have no usable answer");
   await page.getByRole("slider", { name: /Flag anything under/ }).fill("50");
   await expect(pass.locator(".outcome-badge")).toHaveText("Pass");
   await page.getByRole("button", { name: "About Hedging language", exact: true }).click();
@@ -216,7 +217,7 @@ test("desktop workspace screenshots cover both themes and inline previews", asyn
   await page.getByLabel("Paste the text to judge").fill("The launch is on Monday. Please confirm by Friday.");
   await page.getByRole("button", { name: "Run judgment" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Judgment complete" })).toBeVisible();
-  await expect(page.locator(".summary-metrics strong.pass")).toHaveText("5");
+  await expect(page.getByRole("button", { name: "Passed 5", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "About Hedging language", exact: true }).click();
   for (const theme of ["light", "dark"] as const) {
     await page.evaluate((value) => { document.documentElement.dataset.theme = value; }, theme);

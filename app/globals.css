@@ -695,12 +695,12 @@ main:has(> .compact-lab) {
   background: var(--panel);
 }
 .panel-bottom > .muted {
-  font-size: 10px;
+  font-size: 12px;
 }
 .panel-footnote {
   padding: 12px 16px;
   border-top: 1px solid var(--line);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   line-height: 1.6;
   flex-shrink: 0;
@@ -736,7 +736,7 @@ main:has(> .compact-lab) {
   background: var(--panel);
   padding: 8px 12px;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 550;
   white-space: nowrap;
   color: var(--ink);
@@ -777,7 +777,7 @@ main:has(> .compact-lab) {
 .button.small {
   min-height: 28px;
   padding: 4px 8px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .run-actions {
   display: flex;
@@ -816,7 +816,7 @@ main:has(> .compact-lab) {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
 }
 .replacement-feedback:has(p:not(:empty)) {
@@ -837,12 +837,12 @@ main:has(> .compact-lab) {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 .example-heading span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
 }
 .example-options {
@@ -872,13 +872,13 @@ main:has(> .compact-lab) {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
-.example-option strong { font-size: 11px; line-height: 1.35; }
-.example-option span { font-size: 10px; line-height: 1.35; color: var(--muted); }
+.example-option strong { font-size: 13px; line-height: 1.35; }
+.example-option span { font-size: 12px; line-height: 1.35; color: var(--muted); }
 .input-meta {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin: 9px 0 0;
   font-variant-numeric: tabular-nums;
@@ -897,7 +897,7 @@ main:has(> .compact-lab) {
   border-radius: 6px;
   padding: 0 10px;
   min-height: 34px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--muted);
   background: var(--panel);
@@ -997,14 +997,14 @@ main:has(> .compact-lab) {
 }
 .chip-actions .button.quiet {
   min-height: 28px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .method-note {
   background: var(--soft);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 13px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--accent);
   display: flex;
   gap: 15px;
@@ -1047,7 +1047,7 @@ main:has(> .compact-lab) {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 550;
   cursor: pointer;
   list-style: none;
@@ -1090,7 +1090,7 @@ main:has(> .compact-lab) {
   padding: 12px;
   border-radius: 7px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1162,7 +1162,7 @@ main:has(> .compact-lab) {
   background: var(--accent-soft);
   padding: 10px 12px;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
   margin-bottom: 12px;
 }
@@ -1171,14 +1171,14 @@ main:has(> .compact-lab) {
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   margin-bottom: 12px;
 }
 .status-line svg {
   color: var(--accent);
 }
 .verdict-summary {
-  padding: 18px;
+  padding: 12px 14px;
   background: var(--soft);
   border: 1px solid var(--line);
   border-left: 3px solid var(--accent);
@@ -1188,7 +1188,7 @@ main:has(> .compact-lab) {
 .verdict-summary.clear {
   border-left-color: var(--success);
 }
-.verdict-summary h2 {
+.verdict-summary h3 {
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.4px;
@@ -1198,48 +1198,8 @@ main:has(> .compact-lab) {
 }
 .verdict-summary .summary-note {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
-}
-.summary-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 14px;
-  background: var(--panel);
-}
-.summary-metrics > div {
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  border-right: 1px solid var(--line);
-  min-width: 0;
-}
-.summary-metrics > div:last-child {
-  border-right: 0;
-}
-.summary-metrics span {
-  font-size: 10px;
-  color: var(--muted);
-}
-.summary-metrics strong {
-  font-size: 20px;
-  font-weight: 550;
-  letter-spacing: -0.6px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-.summary-metrics strong.issue {
-  color: var(--error);
-}
-.summary-metrics strong.pass {
-  color: var(--success);
-}
-.summary-metrics strong.flag {
-  color: var(--accent);
 }
 .results-toolbar {
   display: flex;
@@ -1261,7 +1221,7 @@ main:has(> .compact-lab) {
   border-radius: 7px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 .result-filter:hover { color: var(--ink); background: var(--soft); }
@@ -1281,7 +1241,7 @@ main:has(> .compact-lab) {
   font-size: 12px;
 }
 .results-toolbar .muted {
-  font-size: 10px;
+  font-size: 12px;
 }
 .evidence-list {
   display: flex;
@@ -1336,11 +1296,11 @@ main:has(> .compact-lab) {
   flex: 0 0 76px;
   text-align: right;
 }
-.result-confidence-label { color: var(--muted); font-size: 10px; line-height: 1.3; }
+.result-confidence-label { color: var(--muted); font-size: 12px; line-height: 1.3; }
 .result-details > .asked { margin-bottom: 12px; }
 .result-details .candidate-list { margin-top: 12px; }
 .result-card .result-name p {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 2px;
   overflow-wrap: anywhere;
@@ -1392,7 +1352,7 @@ main:has(> .compact-lab) {
   border: 1px solid var(--line);
   background: var(--panel);
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
@@ -1434,7 +1394,7 @@ main:has(> .compact-lab) {
   opacity: 0.45;
 }
 .asked {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
@@ -1448,7 +1408,7 @@ main:has(> .compact-lab) {
   gap: 6px;
 }
 .candidate-list > span {
-  font-size: 10px;
+  font-size: 12px;
   background: var(--soft);
   border: 1px solid var(--line);
   padding: 5px 7px;
@@ -1475,7 +1435,7 @@ main:has(> .compact-lab) {
 }
 .evidence-quote figcaption {
   margin-top: 6px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .evidence-locate {
@@ -1488,7 +1448,7 @@ main:has(> .compact-lab) {
   border-radius: 4px;
   background: transparent;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1506,7 +1466,7 @@ main:has(> .compact-lab) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--accent);
 }
 .threshold {
@@ -1597,7 +1557,7 @@ main:has(> .compact-lab) {
   border-radius: 6px;
   padding: 8px 10px;
   margin: 6px 0 0;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink);
   overflow-x: auto;
 }
@@ -1631,7 +1591,7 @@ main:has(> .compact-lab) {
 }
 .palette-input .kbd {
   height: 18px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .palette-list {
   list-style: none;
@@ -1780,12 +1740,12 @@ main:has(> .compact-lab) {
 }
 .steps p {
   margin: 5px 0 0;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.55;
   color: var(--muted);
 }
 .steps code {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--ink);
 }
 .prose {
@@ -1802,7 +1762,7 @@ main:has(> .compact-lab) {
 }
 .prose code {
   color: var(--ink);
-  font-size: 11px;
+  font-size: 13px;
   background: var(--soft);
   padding: 1px 5px;
   border-radius: 4px;
@@ -1813,7 +1773,7 @@ main:has(> .compact-lab) {
   border-radius: 7px;
   padding: 12px;
   margin: 10px 0;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
   color: var(--ink);
   overflow-x: auto;
@@ -2032,7 +1992,7 @@ main:has(> .compact-lab) {
   .page-heading h1 {
     font-size: 24px;
   }
-  .verdict-summary h2 {
+  .verdict-summary h3 {
     font-size: 15px;
   }
   .app-footer {
@@ -2147,4 +2107,24 @@ main:has(> .compact-lab) {
   .demo-banner {
     border-left-width: 4px;
   }
+}
+
+/* Review flow: readable supporting text and compact result orientation. */
+.workspace .field-hint,
+.workspace .input-meta,
+.workspace .panel-footnote { font-size: 12px; line-height: 1.6; }
+.workspace .evidence-quote { padding: 8px 0 8px 14px; }
+.workspace .evidence-quote blockquote { font-size: 14px; line-height: 1.7; }
+.workspace .result-confidence { flex-basis: 86px; }
+.workspace .result-confidence-label { font-size: 12px; }
+.result-comparison { display: block; margin: 6px 0; font-size: 12px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.comparison-note { font-size: 12px; line-height: 1.6; color: var(--muted); margin: 10px 0; }
+.filter-explanation { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+.filter-explanation summary { cursor: pointer; }
+.run-progress { margin: 12px 20px; font-size: 13px; line-height: 1.5; }
+.check-editor.disclosure.card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 14px; }
+.check-editor h3 { font-size: 14px; margin-bottom: 12px; }
+@media (max-width: 540px) {
+  .workspace .input-meta { flex-wrap: wrap; gap: 6px; }
+  .workspace-actions .button { font-size: 12px; padding-inline: 10px; }
 }

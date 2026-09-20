@@ -6,6 +6,7 @@ import { formatPercent, isFlagged } from "@/lib/results";
 
 type Props = {
   result: AxisResult;
+  comparison?: string;
   threshold: number;
   index?: number;
   expanded: boolean;
@@ -19,7 +20,7 @@ type Outcome = "issue" | "pass" | "review";
  * One verdict. The summary labels its outcome and answer confidence. Expanded
  * cards show evidence, with raw probabilities and the question under Details.
  */
-export function AxisResultCard({ result, threshold, index = 0, expanded, onToggle, onLocateEvidence }: Props) {
+export function AxisResultCard({ result, comparison, threshold, index = 0, expanded, onToggle, onLocateEvidence }: Props) {
   const flagged = isFlagged(result, threshold);
   const outcome: Outcome = result.needsReview ? "review" : result.isIssue ? "issue" : "pass";
   const badge = {
@@ -46,6 +47,7 @@ export function AxisResultCard({ result, threshold, index = 0, expanded, onToggl
             {badge.label}{flagged && !result.needsReview ? " · low confidence" : ""}
           </span>
           <h3>{result.axis.name}</h3>
+          {comparison && <span className="result-comparison">{comparison}</span>}
           <p>
             {result.verdictLabel}
             {result.verdictDetail ? ` · ${result.verdictDetail}` : ""}

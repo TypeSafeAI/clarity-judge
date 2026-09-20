@@ -47,6 +47,28 @@ for (const theme of ["light", "dark"] as const) {
       await expectNoViolations(page, "key dialog");
     });
 
+    test("custom check editing, removal recovery, and compared results", async ({ page }, testInfo) => {
+      await openJudge(page);
+      await page.getByText("Add a custom check", { exact: true }).click();
+      await page.getByLabel("Name", { exact: true }).fill("Named owner");
+      await page.getByLabel("Question to ask").fill("Does the text name an owner?");
+      await page.getByRole("button", { name: "Save check", exact: true }).click();
+      await page.getByRole("button", { name: "Run judgment", exact: false }).click();
+      await expect(page.getByRole("status").filter({ hasText: "Judgment complete" })).toBeVisible();
+      await page.getByRole("button", { name: "About Named owner", exact: true }).click();
+      const edit = page.getByRole("button", { name: "Edit Named owner", exact: true });
+      await edit.focus();
+      await page.keyboard.press("Enter");
+      await expectNoViolations(page, "edit preview and comparison");
+      await page.getByRole("region", { name: "Check preview", exact: true }).scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath(`check-editor-${theme}.png`), animations: "disabled" });
+      await page.getByRole("button", { name: "Cancel editing", exact: true }).click();
+      await expect(edit).toBeFocused();
+      await page.getByRole("button", { name: "Remove Named owner", exact: true }).click();
+      await expect(page.getByRole("button", { name: "Undo check removal", exact: true })).toBeFocused();
+      await expectNoViolations(page, "check removal undo");
+    });
+
     test("command palette", async ({ page }) => {
       await openJudge(page);
       await page.getByRole("button", { name: "Open the command palette" }).click();
