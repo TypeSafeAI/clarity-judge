@@ -1,8 +1,10 @@
 "use client";
 
 import { ChevronDown, FileText, ListChecks, Plus } from "lucide-react";
+import { useState } from "react";
 import type { Axis } from "@/types/axis";
 import { splitSentences } from "@/lib/evidenceHeuristic";
+import { WRITING_EXAMPLES } from "@/lib/sampleText";
 import { CheckChips } from "./CheckChips";
 import { CustomAxisBuilder } from "./CustomAxisBuilder";
 import { RunButton } from "./ui";
@@ -11,6 +13,13 @@ type Props = {
   text: string;
   onText: (value: string) => void;
   onLoadSample: () => void;
+  onClear: () => void;
+  onLoadExample: (text: string) => void;
+  canUndo: boolean;
+  onUndo: () => void;
+  replacementMessage: string;
+  evidenceReturnName?: string;
+  onReturnToEvidence: () => void;
   builtInAxes: Axis[];
   customAxes: Axis[];
   selectedIds: Set<string>;
@@ -30,6 +39,13 @@ export function SourcePanel({
   text,
   onText,
   onLoadSample,
+  onClear,
+  onLoadExample,
+  canUndo,
+  onUndo,
+  replacementMessage,
+  evidenceReturnName,
+  onReturnToEvidence,
   builtInAxes,
   customAxes,
   selectedIds,
@@ -42,6 +58,7 @@ export function SourcePanel({
   onRun,
   runHint,
 }: Props) {
+  const [examplesOpen, setExamplesOpen] = useState(true);
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const sentences = splitSentences(text).length;
   const total = builtInAxes.length + customAxes.length;
@@ -49,19 +66,36 @@ export function SourcePanel({
   const allSelected = selected === total && total > 0;
 
   return (
-    <section className="panel" aria-labelledby="source-title">
+    <section className="panel source-panel" aria-labelledby="source-title">
       <div className="panel-heading">
         <div>
           <FileText size={18} strokeWidth={1.5} />
           <h2 id="source-title">Your writing</h2>
         </div>
-        <button type="button" className="button quiet" disabled={running} onClick={onLoadSample}>
-          Load sample
-        </button>
+        <div className="panel-heading-actions">
+          <button type="button" className="button quiet" disabled={running || !text} onClick={onClear}>Clear text</button>
+          <button type="button" className="button quiet" disabled={running} onClick={onLoadSample}>Load sample</button>
+        </div>
       </div>
 
       <div className="panel-content grow">
+        <div className="replacement-feedback">
+          <p role="status" aria-atomic="true">{replacementMessage}</p>
+          {canUndo && <button type="button" className="button small" disabled={running} onClick={onUndo} aria-label="Undo replacement">Undo</button>}
+        </div>
         <fieldset disabled={running} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: "flex", flexDirection: "column", flex: 1 }}>
+          <details className="disclosure example-disclosure" open={examplesOpen} onToggle={(event) => setExamplesOpen(event.currentTarget.open)}>
+            <summary><span>Try an example</span><ChevronDown size={14} className="marker" aria-hidden /></summary>
+            <p className="field-hint">{demoMode ? "Simulated in demo mode" : "Synthetic examples · run to get live verdicts"}</p>
+            <div className="example-options" role="group" aria-label="Writing examples">
+              {WRITING_EXAMPLES.map((example) => (
+                <button key={example.id} type="button" className="example-option" aria-pressed={text === example.text} onClick={() => onLoadExample(example.text)}>
+                  <strong>{example.title}</strong>
+                  <span>{example.description}</span>
+                </button>
+              ))}
+            </div>
+          </details>
           <label className="field-label" htmlFor="judge-text">
             Paste the text to judge
           </label>
@@ -72,8 +106,9 @@ export function SourcePanel({
             maxLength={150_000}
             spellCheck={false}
             placeholder="Paste or type the text you want judged…"
-            onChange={(event) => onText(event.target.value)}
+            onChange={(event) => { setExamplesOpen(false); onText(event.target.value); }}
           />
+          {evidenceReturnName && <button type="button" className="button quiet evidence-return" onClick={onReturnToEvidence}>Back to {evidenceReturnName} verdict</button>}
           <div className="input-meta">
             <span>
               {words} {words === 1 ? "word" : "words"} · {sentences} {sentences === 1 ? "sentence" : "sentences"}
@@ -91,7 +126,7 @@ export function SourcePanel({
           <CheckChips builtInAxes={builtInAxes} customAxes={customAxes} selectedIds={selectedIds} onToggle={onToggle} onRemoveCustom={onRemoveCustom} />
           <div className="chip-actions">
             <span className="field-hint" style={{ margin: 0 }}>
-              Each check is one closed question. Open the Checks page to read what each one asks.
+              Use a check&apos;s info button to preview its question and what counts as an issue.
             </span>
             <button type="button" className="button quiet" onClick={() => onSelectAll(!allSelected)}>
               {allSelected ? "Clear all" : "Select all"}
@@ -109,18 +144,22 @@ export function SourcePanel({
             </div>
           </details>
 
-          <div className="method-note">
-            <span>
-              01<strong>Ask Jev</strong>
-            </span>
-            <span>
-              02<strong>Read the verdicts</strong>
-            </span>
-            <p>
-              Every selected check goes out as one typed question in a single batched request. Yes/No checks come back as a probability; option checks
-              as a pick with a probability per option.
-            </p>
-          </div>
+          <details className="disclosure method-disclosure">
+            <summary>How judgments work <ChevronDown size={14} className="marker" aria-hidden /></summary>
+            <div className="method-note">
+              <span>
+                01<strong>Ask Jev</strong>
+              </span>
+              <span>
+                02<strong>Read the verdicts</strong>
+              </span>
+              <p>
+                {demoMode ? "Demo mode simulates these steps locally. " : ""}
+                In live mode, selected checks are sent in one batched verdict request, with an optional separate evidence request.
+                Yes/No checks return a probability of yes; option checks return a choice and confidence.
+              </p>
+            </div>
+          </details>
         </fieldset>
       </div>
 

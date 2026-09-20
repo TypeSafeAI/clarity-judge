@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, LoaderCircle } from "lucide-react";
 import { isFlagged } from "@/lib/results";
 import { explainError } from "@/lib/errors";
-import type { AxisResult, JudgmentStatus, Summary } from "@/types/results";
+import type { AxisResult, Evidence, JudgmentStatus, Summary } from "@/types/results";
 import type { JevErrorPayload } from "@/types/jev";
 import { AxisResultCard } from "./AxisResultCard";
 import { SummaryMetrics } from "./SummaryMetrics";
@@ -20,7 +20,9 @@ type Props = {
   threshold: number;
   onThresholdChange: (value: number) => void;
   onRetry: () => void;
+  canRun: boolean;
   onChangeKey: () => void;
+  onLocateEvidence: (evidence: Evidence, trigger: HTMLButtonElement, name: string) => void;
   demoMode: boolean;
   /** True when the results on screen came from the mock, whatever the mode is now. */
   resultsSimulated: boolean;
@@ -30,15 +32,28 @@ type Props = {
 };
 
 /** Right panel: the verdicts, one card per check, plus the threshold. */
-export function ResultsPanel({ status, results, summary, error, stale, threshold, onThresholdChange, onRetry, onChangeKey, demoMode, resultsSimulated, runId, exportData }: Props) {
+export function ResultsPanel({ status, results, summary, error, stale, threshold, onThresholdChange, onRetry, canRun, onChangeKey, onLocateEvidence, demoMode, resultsSimulated, runId, exportData }: Props) {
   const explained = error ? explainError(error) : null;
+  const [filter, setFilter] = useState<"all" | "issues" | "review" | "passed">("all");
+  const visibleResults = results.filter((result) =>
+    filter === "all" ||
+    (filter === "issues" && result.isIssue && !result.needsReview) ||
+    (filter === "review" && (result.needsReview || isFlagged(result, threshold))) ||
+    (filter === "passed" && !result.isIssue && !result.needsReview),
+  );
+  const filterCounts = {
+    all: results.length,
+    issues: results.filter((result) => result.isIssue && !result.needsReview).length,
+    review: results.filter((result) => result.needsReview || isFlagged(result, threshold)).length,
+    passed: results.filter((result) => !result.isIssue && !result.needsReview).length,
+  };
 
   // Progressive disclosure: issues and flagged checks start open, passes closed.
   // Any manual toggle or expand/collapse-all overrides that until the next run.
   const [override, setOverride] = useState<{ runId: number; ids: Set<string> } | null>(null);
   const defaultOpen = (r: AxisResult) => r.isIssue || r.needsReview || isFlagged(r, threshold);
   const isOpen = (r: AxisResult) => (override && override.runId === runId ? override.ids.has(r.axis.id) : defaultOpen(r));
-  const allOpen = results.length > 0 && results.every(isOpen);
+  const allOpen = visibleResults.length > 0 && visibleResults.every(isOpen);
 
   function toggleOne(id: string) {
     const ids = new Set(results.filter(isOpen).map((r) => r.axis.id));
@@ -47,7 +62,12 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
     setOverride({ runId, ids });
   }
   function setAll(open: boolean) {
-    setOverride({ runId, ids: open ? new Set(results.map((r) => r.axis.id)) : new Set() });
+    const ids = new Set(results.filter(isOpen).map((r) => r.axis.id));
+    for (const result of visibleResults) {
+      if (open) ids.add(result.axis.id);
+      else ids.delete(result.axis.id);
+    }
+    setOverride({ runId, ids });
   }
 
   const running = status === "running";
@@ -64,7 +84,7 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
     <section className="panel" aria-labelledby="results-title">
       <div className="panel-heading">
         <div>
-          <h2 id="results-title">Verdicts</h2>
+          <h2 id="results-title" tabIndex={-1}>Verdicts</h2>
           {summary && (
             <span className={`count ${summary.issues === 0 && summary.flagged === 0 ? "good" : "accent"}`}>
               {summary.passed}/{summary.total} passed
@@ -117,7 +137,12 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
           </div>
         )}
 
-        {stale && !running && <p className="notice">The text or checks changed. Run again for an up-to-date judgment.</p>}
+        {stale && !running && (
+          <div className="notice stale-notice">
+            <span>The text or checks changed. These verdicts reflect the previous run. Run again to refresh them.</span>
+            <button type="button" className="button small" disabled={!canRun} onClick={onRetry}>Run updated judgment</button>
+          </div>
+        )}
 
         {running && (
           <p className="status-line" role="status">
@@ -134,17 +159,26 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
           <div style={{ opacity: running ? 0.5 : 1, transition: "opacity 150ms" }}>
             <SummaryMetrics summary={summary} simulated={resultsSimulated} />
 
+            <div className="result-filters" role="group" aria-label="Filter verdicts" aria-describedby="review-filter-help">
+              {(["all", "issues", "review", "passed"] as const).map((option) => (
+                <button key={option} type="button" className="result-filter" aria-pressed={filter === option} onClick={() => setFilter(option)}>
+                  {option === "all" ? "All" : option === "issues" ? "Issues" : option === "review" ? "Needs review" : "Passed"} <span>{filterCounts[option]}</span>
+                </button>
+              ))}
+            </div>
+            <p id="review-filter-help" className="field-hint">Needs review includes low-confidence passes and issues, plus checks without a usable answer.</p>
+
             <div className="results-toolbar">
               <span className="muted">
-                {results.length} {results.length === 1 ? "check" : "checks"} · issues and low-confidence checks start open
+                {visibleResults.length} of {results.length} {results.length === 1 ? "check" : "checks"} shown
               </span>
-              <button type="button" className="button quiet small" onClick={() => setAll(!allOpen)}>
+              <button type="button" className="button quiet small" disabled={visibleResults.length === 0} onClick={() => setAll(!allOpen)}>
                 {allOpen ? "Collapse all" : "Expand all"}
               </button>
             </div>
 
             <div className="evidence-list">
-              {results.map((result, i) => (
+              {visibleResults.map((result, i) => (
                 <AxisResultCard
                   key={`${runId}-${result.axis.id}`}
                   result={result}
@@ -152,8 +186,10 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
                   index={i}
                   expanded={isOpen(result)}
                   onToggle={() => toggleOne(result.axis.id)}
+                  onLocateEvidence={stale || running ? undefined : (evidence, trigger) => onLocateEvidence(evidence, trigger, result.axis.name)}
                 />
               ))}
+              {visibleResults.length === 0 && <p className="filter-empty">No verdicts match this filter.</p>}
             </div>
           </div>
         )}
@@ -180,7 +216,7 @@ export function ResultsPanel({ status, results, summary, error, stale, threshold
       </div>
 
       <p className="panel-footnote">
-        Confidence is Jev&apos;s probability for its own answer, not a guarantee of accuracy. Flags update instantly without a new request.
+        Answer confidence is derived from yes/no probabilities or supplied for the chosen option. It is not a guarantee of accuracy. Flags update instantly without a new request.
         {demoMode ? " Demo results are simulated." : ""}
       </p>
     </section>

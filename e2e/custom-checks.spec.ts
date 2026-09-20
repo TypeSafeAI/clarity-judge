@@ -14,6 +14,9 @@ test.describe("custom checks", () => {
     const chip = checkChips(page).getByRole("checkbox", { name: "On brand" });
     await expect(chip).toBeChecked();
     await expect(page.locator(".field-label .count")).toHaveText("8/8 on");
+    await page.getByRole("button", { name: "About On brand", exact: true }).click();
+    await expect(page.getByRole("region", { name: "On brand check details" })).toContainText("Counts as an issue: Yes");
+    await expect(page.getByRole("region", { name: "On brand check details" })).toContainText("Does this sound like our brand voice?");
 
     await page.getByRole("button", { name: "Run judgment" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Judgment complete" })).toBeVisible();
@@ -26,6 +29,7 @@ test.describe("custom checks", () => {
 
     await page.getByRole("button", { name: "Remove On brand" }).click();
     await expect(checkChips(page).getByRole("checkbox", { name: "On brand" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "On brand check details" })).toHaveCount(0);
     await expect(page.locator(".field-label .count")).toHaveText("7/7 on");
   });
 
@@ -44,6 +48,8 @@ test.describe("custom checks", () => {
     await page.getByRole("checkbox", { name: "Executives" }).check();
     await page.getByRole("button", { name: "Save check" }).click();
     await expect(checkChips(page).getByRole("checkbox", { name: "Audience" })).toBeChecked();
+    await page.getByRole("button", { name: "About Audience", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Audience check details" })).toContainText("Counts as an issue: Executives");
   });
 
   test("select all and clear all toggle every chip", async ({ page }) => {

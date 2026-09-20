@@ -26,6 +26,8 @@ export function formatPercent(value: number): string {
 export function buildSummary(results: AxisResult[], threshold: number): Summary {
   const total = results.length;
   const flaggedResults = results.filter((r) => isFlagged(r, threshold));
+  const unavailable = flaggedResults.filter((r) => r.needsReview).length;
+  const lowConfidence = flaggedResults.length - unavailable;
   const issueResults = results.filter((r) => !r.needsReview && r.isIssue);
   const passed = results.filter((r) => !r.needsReview && !r.isIssue).length;
 
@@ -39,10 +41,13 @@ export function buildSummary(results: AxisResult[], threshold: number): Summary 
     if (issueResults.length > 0) {
       parts.push(`Review ${listNames(issueResults.map((r) => r.axis.name))}.`);
     }
-    if (flaggedResults.length > 0) {
+    if (lowConfidence > 0) {
       parts.push(
-        `${flaggedResults.length} ${flaggedResults.length === 1 ? "check is" : "checks are"} low-confidence and worth a second look.`,
+        `${lowConfidence} ${lowConfidence === 1 ? "check is" : "checks are"} low-confidence and worth a second look.`,
       );
+    }
+    if (unavailable > 0) {
+      parts.push(`${unavailable} ${unavailable === 1 ? "check has" : "checks have"} no usable answer and ${unavailable === 1 ? "needs" : "need"} review.`);
     }
     takeaway = parts.join(" ");
   }
