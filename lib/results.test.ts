@@ -59,7 +59,13 @@ describe("buildSummary", () => {
     );
     expect(summary).toMatchObject({ total: 4, passed: 1, issues: 2, flagged: 2 });
     expect(summary.takeaway).toBe(
-      "1 of 4 checks passed. Review hedging language and em dash usage. 2 checks are low-confidence and worth a second look.",
+      "1 of 4 checks passed. Review hedging language and em dash usage. 1 check is low-confidence and worth a second look. 1 check has no usable answer and needs review.",
     );
+  });
+
+  it("does not describe missing answers as measured low confidence", () => {
+    const summary = buildSummary([result("hedging", { needsReview: true, confidence: 0 })], 0.7);
+    expect(summary).toMatchObject({ passed: 0, issues: 0, flagged: 1 });
+    expect(summary.takeaway).toBe("0 of 1 checks passed. 1 check has no usable answer and needs review.");
   });
 });

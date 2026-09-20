@@ -55,7 +55,7 @@ test.describe("keyboard", () => {
     await expect(hedging).toBeChecked();
 
     const pass = resultCards(page).filter({ has: page.locator('[data-outcome="pass"]') }).first();
-    await pass.locator("summary").focus();
+    await pass.locator(":scope > summary").focus();
     await page.keyboard.press("Enter");
     await expect(pass).toHaveAttribute("open", "");
     await page.keyboard.press("Enter");
@@ -65,6 +65,7 @@ test.describe("keyboard", () => {
   test("every probability track is a named meter", async ({ page }) => {
     await openJudge(page);
     await page.getByRole("button", { name: "Expand all" }).click();
+    for (const details of await page.locator(".result-details > summary").all()) await details.click();
     const meters = page.getByRole("meter");
     await expect(meters).toHaveCount(7);
     for (const meter of await meters.all()) {

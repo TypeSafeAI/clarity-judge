@@ -78,4 +78,71 @@ test.describe("judge workspace in demo mode", () => {
     await openJudge(page);
     await expect(page.getByRole("button", { name: "Export" })).toBeEnabled();
   });
+
+  test("clear, filter, and export keep the last judged source", async ({ page }) => {
+    await openJudge(page);
+    const source = page.getByLabel("Paste the text to judge");
+    const judgedText = await source.inputValue();
+
+    await page.getByRole("button", { name: "Issues 4", exact: true }).click();
+    await expect(resultCards(page)).toHaveCount(4);
+    await page.getByRole("button", { name: "Passed 3", exact: true }).click();
+    await expect(resultCards(page)).toHaveCount(3);
+    await page.getByRole("button", { name: "All 7", exact: true }).click();
+    await expect(resultCards(page)).toHaveCount(7);
+
+    await page.getByRole("button", { name: "Clear text" }).click();
+    await expect(source).toBeEmpty();
+    await expect(page.locator(".panel .notice")).toContainText("Run again");
+    await expect(page.getByRole("button", { name: "Run updated judgment" })).toBeDisabled();
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export" }).click();
+    const download = await downloadPromise;
+    const stream = await download.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    expect(JSON.parse(Buffer.concat(chunks).toString()).text).toBe(judgedText);
+  });
+
+  test("examples explain their focus and can each be judged", async ({ page }) => {
+    await openJudge(page);
+    const examples = page.getByRole("group", { name: "Writing examples" });
+    await expect(examples.getByRole("button")).toHaveCount(3);
+    await expect(examples.getByRole("button", { name: /Hedged launch note/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(examples).toContainText("qualification");
+
+    for (const title of ["Clear update", "Vague next steps"]) {
+      await examples.getByRole("button", { name: new RegExp(title) }).click();
+      await expect(examples.getByRole("button", { name: new RegExp(title) })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByLabel("Paste the text to judge")).not.toBeEmpty();
+      await page.getByRole("button", { name: "Run updated judgment" }).click();
+      await expect(page.getByRole("status").filter({ hasText: "Judgment complete" })).toBeVisible();
+      await expect(resultCards(page)).toHaveCount(7);
+    }
+  });
+
+  test("evidence locates its sentence in the editor, but stale evidence cannot", async ({ page }) => {
+    await openJudge(page);
+    const first = resultCards(page).first();
+    const evidence = await first.locator(".evidence-quote blockquote").innerText();
+    await first.getByRole("button", { name: "Find in writing" }).click();
+    const editor = page.getByLabel("Paste the text to judge");
+    await expect(editor).toBeFocused();
+    const selected = await editor.evaluate((element: HTMLTextAreaElement) => element.value.slice(element.selectionStart, element.selectionEnd));
+    expect(`“${selected}”`).toBe(evidence);
+
+    await editor.fill("A new draft with no matching sentence.");
+    await expect(first.getByRole("button", { name: "Find in writing" })).toHaveCount(0);
+  });
+
+  test("filters show counts and update the review count with the threshold", async ({ page }) => {
+    await openJudge(page);
+    const filters = page.getByRole("group", { name: "Filter verdicts" });
+    await expect(filters.getByRole("button", { name: "Issues 4" })).toBeVisible();
+    await expect(filters.getByRole("button", { name: "Needs review 1" })).toBeVisible();
+    await page.getByRole("slider", { name: /Flag anything under/ }).fill("95");
+    await expect(filters.getByRole("button", { name: "Needs review 4" })).toBeVisible();
+    await filters.getByRole("button", { name: "Needs review 4" }).click();
+    await expect(resultCards(page)).toHaveCount(4);
+  });
 });

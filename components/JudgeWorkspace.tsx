@@ -16,7 +16,7 @@ import { CommandPalette, type Command } from "./CommandPalette";
 import { ResultsPanel } from "./ResultsPanel";
 import { useShell } from "./ShellContext";
 import { SourcePanel } from "./SourcePanel";
-import { Heading } from "./ui";
+import { Heading, RunButton } from "./ui";
 
 /**
  * The judge workspace. All judgment state lives here; the two panels are
@@ -26,6 +26,9 @@ export function JudgeWorkspace() {
   const { apiKey, demoMode, hydrated, setTelemetry, setRunning, openKeyDialog, paletteOpen, setPaletteOpen, modKey } = useShell();
 
   const [text, setText] = useState(SAMPLE_TEXT);
+  const [previousText, setPreviousText] = useState<string | null>(null);
+  const [replacementMessage, setReplacementMessage] = useState("");
+  const [evidenceReturn, setEvidenceReturn] = useState<{ target: HTMLElement; name: string; signature: string; runId: number } | null>(null);
   const [customAxes, setCustomAxes] = useState<Axis[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(DEFAULT_SETTINGS.selectedAxisIds));
   const [threshold, setThreshold] = useState(DEFAULT_SETTINGS.threshold);
@@ -35,6 +38,7 @@ export function JudgeWorkspace() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [runId, setRunId] = useState(0);
   const [snapshot, setSnapshot] = useState("");
+  const [judgedText, setJudgedText] = useState("");
   // Whether the results on screen came from the mock, decided when they arrived.
   const [resultsSimulated, setResultsSimulated] = useState(false);
   const autoRan = useRef(false);
@@ -75,6 +79,7 @@ export function JudgeWorkspace() {
       return;
     }
     setStatus("running");
+    setEvidenceReturn(null);
     setRunning(true);
     setError(null);
     try {
@@ -87,6 +92,7 @@ export function JudgeWorkspace() {
       setResultsSimulated(telemetry.source === "simulated");
       setTelemetry(telemetry);
       setSnapshot(JSON.stringify([text, selectedAxes.map((a) => a.id), demoMode]));
+      setJudgedText(text);
       setRunId((id) => id + 1);
       setStatus("done");
     } catch (caught) {
@@ -128,6 +134,7 @@ export function JudgeWorkspace() {
   }, [run, paletteOpen, setPaletteOpen]);
 
   function toggleAxis(id: string) {
+    setEvidenceReturn(null);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -136,13 +143,16 @@ export function JudgeWorkspace() {
     });
   }
   function selectAll(select: boolean) {
+    setEvidenceReturn(null);
     setSelectedIds(select ? new Set(allAxes.map((a) => a.id)) : new Set());
   }
   function addCustomAxis(axis: Axis) {
+    setEvidenceReturn(null);
     setCustomAxes((prev) => [...prev, axis]);
     setSelectedIds((prev) => new Set(prev).add(axis.id));
   }
   function removeCustomAxis(id: string) {
+    setEvidenceReturn(null);
     setCustomAxes((prev) => prev.filter((a) => a.id !== id));
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -154,11 +164,44 @@ export function JudgeWorkspace() {
 
   const summary = useMemo(() => (results.length ? buildSummary(results, threshold) : null), [results, threshold]);
   const running = status === "running";
+  const canReturnToEvidence = evidenceReturn && evidenceReturn.signature === signature && evidenceReturn.runId === runId && status === "done";
+
+  function focusWriting() {
+    const editor = document.getElementById("judge-text");
+    editor?.scrollIntoView({ block: "center" });
+    editor?.focus({ preventScroll: true });
+  }
+
+  function focusVerdicts() {
+    const heading = document.getElementById("results-title");
+    const main = heading?.closest("main");
+    if (heading && main) {
+      main.scrollTop += heading.getBoundingClientRect().top - main.getBoundingClientRect().top - 16;
+    }
+    heading?.focus({ preventScroll: true });
+  }
+
+  function replaceText(next: string, message: string) {
+    if (next === text) return;
+    setPreviousText(text);
+    setText(next);
+    setEvidenceReturn(null);
+    setReplacementMessage(`${message} Undo is available.`);
+  }
+
+  function undoReplacement() {
+    if (previousText === null) return;
+    setText(previousText);
+    setPreviousText(null);
+    setEvidenceReturn(null);
+    setReplacementMessage("Previous text restored.");
+    focusWriting();
+  }
 
   const commands: Command[] = [
     { id: "run", group: "Judge", label: "Run judgment", hint: `${modKey} ↵`, run: () => void run() },
-    { id: "sample", group: "Text", label: "Load sample text", run: () => setText(SAMPLE_TEXT) },
-    { id: "clear-text", group: "Text", label: "Clear text", run: () => setText("") },
+    { id: "sample", group: "Text", label: "Load sample text", run: () => replaceText(SAMPLE_TEXT, "Sample loaded.") },
+    { id: "clear-text", group: "Text", label: "Clear text", run: () => replaceText("", "Text cleared.") },
     { id: "all", group: "Checks", label: "Select all checks", run: () => selectAll(true) },
     { id: "none", group: "Checks", label: "Clear all checks", run: () => selectAll(false) },
     ...allAxes.map((axis) => ({
@@ -187,7 +230,7 @@ export function JudgeWorkspace() {
             Decisions, <span>not scores.</span>
           </>
         }
-        description="Separate, named checks. Each one is a closed question for Jev, answered with its own verdict, confidence, and the sentence that drove it."
+        description="Separate, named checks. Each one is a closed question for Jev, answered with its own verdict, confidence, and a relevant source sentence."
       >
         <span className="pill">
           <ShieldCheck size={14} />
@@ -198,8 +241,24 @@ export function JudgeWorkspace() {
       <div className="split">
         <SourcePanel
           text={text}
-          onText={setText}
-          onLoadSample={() => setText(SAMPLE_TEXT)}
+          onText={(value) => { setText(value); setEvidenceReturn(null); }}
+          onLoadSample={() => replaceText(SAMPLE_TEXT, "Sample loaded.")}
+          onClear={() => replaceText("", "Text cleared.")}
+          onLoadExample={(value) => replaceText(value, "Example loaded.")}
+          canUndo={previousText !== null}
+          onUndo={undoReplacement}
+          replacementMessage={replacementMessage}
+          evidenceReturnName={canReturnToEvidence ? evidenceReturn.name : undefined}
+          onReturnToEvidence={() => {
+            if (!canReturnToEvidence) return;
+            if (evidenceReturn.target.isConnected) {
+              evidenceReturn.target.scrollIntoView({ block: "center" });
+              evidenceReturn.target.focus({ preventScroll: true });
+            } else {
+              focusVerdicts();
+            }
+            setEvidenceReturn(null);
+          }}
           builtInAxes={BUILT_IN_AXES}
           customAxes={customAxes}
           selectedIds={selectedIds}
@@ -221,16 +280,35 @@ export function JudgeWorkspace() {
           threshold={threshold}
           onThresholdChange={setThreshold}
           onRetry={() => void run()}
+          canRun={!!text.trim() && selectedAxes.length > 0}
           onChangeKey={openKeyDialog}
+          onLocateEvidence={(snippet, trigger, name) => {
+            const editor = document.getElementById("judge-text") as HTMLTextAreaElement | null;
+            if (!editor) return;
+            const start = editor.value.indexOf(snippet);
+            if (start < 0) return;
+            const target = trigger.closest(".result-card")?.querySelector<HTMLElement>(":scope > summary");
+            if (target) setEvidenceReturn({ target, name, signature, runId });
+            focusWriting();
+            editor.setSelectionRange(start, start + snippet.length);
+          }}
           demoMode={demoMode}
           resultsSimulated={resultsSimulated}
           runId={runId}
           exportData={
             results.length
-              ? { text, threshold, mode: resultsSimulated ? "simulated" : "jev", results: results.map(({ axis, ...rest }) => ({ check: axis.name, ...rest })) }
+              ? { text: judgedText, threshold, mode: resultsSimulated ? "simulated" : "jev", results: results.map(({ axis, ...rest }) => ({ check: axis.name, ...rest })) }
               : null
           }
         />
+      </div>
+
+      <div className="workspace-actions">
+        <nav aria-label="Workspace shortcuts">
+          <button type="button" className="button quiet" onClick={focusWriting}>Writing</button>
+          <button type="button" className="button quiet" onClick={focusVerdicts}>Verdicts</button>
+        </nav>
+        <RunButton busy={running} disabled={!text.trim() || selectedAxes.length === 0} onClick={() => void run()}>Run judgment</RunButton>
       </div>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />

@@ -34,6 +34,10 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Expand all" }).click();
       await page.getByText("Add a custom check").click();
       await expectNoViolations(page, "judge expanded");
+      await page.locator(".result-details > summary").first().click();
+      await page.getByRole("button", { name: "About Hedging language", exact: true }).click();
+      await page.getByRole("button", { name: "Clear text", exact: true }).click();
+      await expectNoViolations(page, "raw probabilities, check preview, and undo");
     });
 
     test("key dialog", async ({ page }) => {

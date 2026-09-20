@@ -21,6 +21,6 @@ pnpm build
 pnpm test:e2e
 ```
 
-Use mocked transports for automated tests. For UI work, inspect demo/live labeling, custom checks, threshold changes, key removal, error states, keyboard controls, themes, and narrow layouts. Review the diff for sensitive text even when the scanner passes.
+Use mocked transports for automated tests. For UI work, inspect demo/live labeling, custom checks, threshold changes, key removal, error states, keyboard controls, themes, and narrow layouts. Also verify replacement Undo (including command-palette actions), inline check polarity previews, nested probability details, and the narrow-screen writing/verdict navigation with evidence return focus. Draft recovery must remain in memory rather than browser storage. Review the diff for sensitive text even when the scanner passes.
 
 Open a focused pull request with the intended behavior, relevant synthetic examples, commands actually run, results, and any unverified behavior. Do not describe simulated confidence as calibrated accuracy or a writing-style verdict as factual verification.

@@ -42,7 +42,7 @@ Alternatively, use the app's API key panel. A browser key overrides the server e
 
 ## Try a judgment
 
-The editor starts with a deliberately hedgy sample. Choose the checks to run, then press **Run Judgment**, or use `⌘/Ctrl + Enter` in the editor. Each enabled check becomes a separate typed question, submitted in one primary batch.
+The editor starts with a deliberately hedgy sample. You can switch among three synthetic examples: a hedged launch note, a clear update, and vague next steps. Each card says what to inspect; selecting one replaces the editor text. Examples collapse under **Try an example** when you start editing, and **How judgments work** holds the request details. **Undo** restores the text replaced by Clear text, Load sample, an example, or the command palette. The previous text is kept in memory only and is lost on reload. Choose the checks to run, then press **Run Judgment**, or use `⌘/Ctrl + Enter` in the editor. Each enabled check becomes a separate typed question, submitted in one primary batch.
 
 | Check | What it asks about |
 | --- | --- |
@@ -56,9 +56,9 @@ The editor starts with a deliberately hedgy sample. Choose the checks to run, th
 
 These are editable writing preferences, not universal rules: a hedge may accurately express uncertainty, and passive voice can be appropriate. Check the actual text before acting on a verdict.
 
-Results show a plain-language verdict, confidence, a relevant sentence, and an uncertainty flag. The default flagging threshold is 70%; moving it re-evaluates flags locally without a new model call. Problematic and uncertain cards expand first; **Expand all** exposes the rest. The summary counts outcomes from the individual checks rather than providing an independent model-generated grade.
+Results show a plain-language verdict, labeled answer confidence, and a relevant sentence. Uncertain answers say **Pass · low confidence** or **Issue · low confidence**; missing or malformed answers say **Needs review**. Open a card’s **Details** for the raw yes probability or option probabilities and the exact question. The default flagging threshold is 70%; moving it re-evaluates flags locally without a new model call. Filter cards by issues, checks needing review, or passes; filter counts update with the threshold, and a low-confidence pass can appear in both review and passed views. Problematic and uncertain cards expand first; **Expand all** exposes the current view. **Find in writing** selects an evidence sentence in the editor when the results are current; **Back to … verdict** returns focus to that card. Editing or rerunning clears the return path. If text or checks change, the old verdicts are marked stale and **Run updated judgment** refreshes them. Clear text from the editor when starting over. Exports retain the text from the last completed judgment, even if the editor has since changed. The summary counts outcomes from the individual checks rather than providing an independent model-generated grade.
 
-The interface follows the TypeSafe playground at [jev.works](https://jev.works): a sidebar with the judge and two reference pages (**Checks**, which lists every built-in question, and **How it works**), a topbar with the last run's latency and token readout, the API key dialog, and the theme switch. Use `⌘K` / `Ctrl+K` for the command palette and `⌘↵` / `Ctrl+Enter` to run. Narrow screens stack the two panels and move the sidebar behind a menu button.
+The interface follows the TypeSafe playground at [jev.works](https://jev.works): a sidebar with the judge and two reference pages (**Checks**, which lists every built-in question, and **How it works**), a topbar with the last run's latency and token readout, the API key dialog, and the theme switch. Use `⌘K` / `Ctrl+K` for the command palette and `⌘↵` / `Ctrl+Enter` to run. Narrow screens stack the two panels and move the sidebar behind a menu button. Below 1050px, a persistent toolbar keeps **Writing**, **Verdicts**, and **Run judgment** reachable while scrolling. The first two controls move focus to the editor and verdict heading.
 
 ## Accessibility
 
@@ -72,6 +72,8 @@ The interface is built to be used without a mouse, without colour vision, and wi
 Automated checks run against every page and state with axe-core (WCAG 2.2 AA rules plus best practices) report no violations. That is a floor, not a guarantee; if something is hard to use, open an issue.
 
 ## Add a custom check
+
+Use the info button beside any check to read its exact question, answer options, and which answer counts as an issue without leaving the workspace. Check types are labeled **Yes / No** and **Choose one**.
 
 Choose **Add a custom check**, then provide a name, question, and answer type: Yes/No or a fixed list of options. Declare which answers count as a problem; optionally describe what a good result looks like. Custom checks are stored in that browser's localStorage.
 
