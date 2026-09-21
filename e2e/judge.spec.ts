@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { alerts, openJudge, resultCards } from "./helpers";
+import { alerts, checkChips, openJudge, resultCards } from "./helpers";
 
 test.describe("judge workspace in demo mode", () => {
   test("runs the sample automatically and shows the README's deterministic result", async ({ page }) => {
@@ -70,6 +70,48 @@ test.describe("judge workspace in demo mode", () => {
     await expect(page.getByRole("button", { name: "Run judgment" })).toBeDisabled();
     await page.keyboard.press(process.platform === "darwin" ? "Meta+Enter" : "Control+Enter");
     await expect(alerts(page)).toContainText("Add some text to judge first.");
+  });
+
+  test("a validation error clears itself once the workspace is fixed", async ({ page }) => {
+    await openJudge(page);
+    const editor = page.getByLabel("Paste the text to judge");
+    await editor.fill("");
+    await page.keyboard.press(process.platform === "darwin" ? "Meta+Enter" : "Control+Enter");
+    await expect(alerts(page)).toContainText("Add some text to judge first.");
+    await expect(page.locator(".stale-notice")).toContainText("Run again once there's some text.");
+
+    await editor.fill("Now there is text again.");
+    await expect(alerts(page)).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "Run failed" })).toHaveCount(0);
+    await expect(page.locator(".stale-notice")).toContainText("The text changed. These verdicts reflect the previous run. Run again to refresh them.");
+    await expect(resultCards(page)).toHaveCount(7);
+
+    await page.getByRole("button", { name: "Clear all" }).click();
+    await expect(page.locator(".stale-notice")).toContainText("The text and checks changed.");
+    await expect(page.locator(".stale-notice")).toContainText("Run again once a check is switched on.");
+    await page.getByRole("button", { name: "Select all" }).click();
+    await expect(page.locator(".stale-notice")).toContainText("The text changed.");
+  });
+
+  test("the stale notice names the checks when only they changed", async ({ page }) => {
+    await openJudge(page);
+    const hedging = checkChips(page).getByRole("checkbox", { name: "Hedging language" });
+    await hedging.focus();
+    await page.keyboard.press("Space");
+    await expect(hedging).not.toBeChecked();
+    await expect(page.locator(".stale-notice")).toContainText("The checks changed. These verdicts reflect the previous run. Run again to refresh them.");
+    await expect(page.locator(".stale-notice")).not.toContainText("text");
+  });
+
+  test("the threshold is in view under the verdicts without scrolling", async ({ page, isMobile }) => {
+    test.skip(isMobile, "on phones the panel scrolls with the page instead of pinning its footer");
+    await openJudge(page);
+    const slider = page.getByRole("slider", { name: /Flag anything under/ });
+    await expect(slider).toBeInViewport();
+    await expect(page.locator(".panel-threshold")).toContainText("Demo results are simulated.");
+    // The label still keeps the value in sync.
+    await slider.fill("80");
+    await expect(page.locator(".threshold label strong")).toHaveText("80%");
   });
 
   test("export is enabled once there are results", async ({ page }) => {

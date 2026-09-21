@@ -12,6 +12,7 @@ import { runJudgmentDetailed } from "@/lib/judge";
 import { checkDefinition } from "@/lib/comparison";
 import { buildSummary } from "@/lib/results";
 import { SAMPLE_TEXT } from "@/lib/sampleText";
+import { describeStaleness, isStale } from "@/lib/staleness";
 import { redactSecrets } from "@/lib/redact";
 import { DEFAULT_SETTINGS, loadCustomAxes, loadSettings, saveCustomAxes, saveSettings } from "@/lib/storage";
 import { CommandPalette, type Command } from "./CommandPalette";
@@ -41,6 +42,7 @@ export function JudgeWorkspace() {
   const [runId, setRunId] = useState(0);
   const [snapshot, setSnapshot] = useState("");
   const [judgedText, setJudgedText] = useState("");
+  const [judgedChecks, setJudgedChecks] = useState("");
   // Whether the results on screen came from the mock, decided when they arrived.
   const [resultsSimulated, setResultsSimulated] = useState(false);
   const autoRan = useRef(false);
@@ -70,8 +72,15 @@ export function JudgeWorkspace() {
   const selectedAxes = useMemo(() => allAxes.filter((axis) => selectedIds.has(axis.id)), [allAxes, selectedIds]);
 
   // What the last run was based on, so the results can say when they're stale.
-  const signature = useMemo(() => JSON.stringify([text, selectedAxes.map(checkDefinition), demoMode]), [text, selectedAxes, demoMode]);
-  const stale = !!snapshot && snapshot !== signature;
+  const checksSignature = useMemo(() => JSON.stringify(selectedAxes.map(checkDefinition)), [selectedAxes]);
+  const signature = useMemo(() => JSON.stringify([text, checksSignature, demoMode]), [text, checksSignature, demoMode]);
+  const staleReasons = useMemo(
+    () => ({ textChanged: judgedText !== text, checksChanged: judgedChecks !== checksSignature, modeChanged: resultsSimulated !== demoMode }),
+    [judgedText, text, judgedChecks, checksSignature, resultsSimulated, demoMode],
+  );
+  const stale = !!snapshot && isStale(staleReasons);
+  // Why a run can't start right now, phrased as the next step.
+  const runBlocker = !text.trim() ? "Run again once there's some text." : selectedAxes.length === 0 ? "Run again once a check is switched on." : null;
 
   const run = useCallback(async () => {
     if (inFlight.current) return;
@@ -100,8 +109,9 @@ export function JudgeWorkspace() {
           setResults(primary);
           setResultsSimulated(primaryTelemetry.source === "simulated");
           setTelemetry(primaryTelemetry);
-          setSnapshot(JSON.stringify([text, selectedAxes.map(checkDefinition), demoMode]));
+          setSnapshot(JSON.stringify([text, checksSignature, demoMode]));
           setJudgedText(text);
+          setJudgedChecks(checksSignature);
           setRunId((id) => id + 1);
           setStatus(evidencePending ? "evidence" : "done");
         },
@@ -109,8 +119,9 @@ export function JudgeWorkspace() {
       setResults(next);
       setResultsSimulated(telemetry.source === "simulated");
       setTelemetry(telemetry);
-      setSnapshot(JSON.stringify([text, selectedAxes.map(checkDefinition), demoMode]));
+      setSnapshot(JSON.stringify([text, checksSignature, demoMode]));
       setJudgedText(text);
+      setJudgedChecks(checksSignature);
       completedRun.current = { results: next, simulated: telemetry.source === "simulated" };
       setStatus("done");
     } catch (caught) {
@@ -125,7 +136,7 @@ export function JudgeWorkspace() {
       inFlight.current = false;
       setRunning(false);
     }
-  }, [text, selectedAxes, demoMode, apiKey, setRunning, setTelemetry]);
+  }, [text, selectedAxes, checksSignature, demoMode, apiKey, setRunning, setTelemetry]);
 
   // Demo mode runs once automatically so the results panel isn't empty on first
   // load. Live mode never spends credits without a click.
@@ -136,14 +147,17 @@ export function JudgeWorkspace() {
     }
   }, [hydrated, settingsLoaded, demoMode, run]);
 
-  // ⌘K / Ctrl+K opens the command palette; ⌘↵ runs from anywhere.
+  // ⌘K / Ctrl+K opens the command palette; ⌘↵ runs from anywhere. Neither
+  // reaches past another modal dialog (the key dialog), and ⌘↵ never fires
+  // from inside the palette, whose own Enter runs the highlighted command.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
+      if (!paletteOpen && document.querySelector("dialog[open]")) return;
       if (event.key.toLowerCase() === "k") {
         event.preventDefault();
         setPaletteOpen(!paletteOpen);
-      } else if (event.key === "Enter") {
+      } else if (event.key === "Enter" && !paletteOpen) {
         event.preventDefault();
         void run();
       }
@@ -170,6 +184,7 @@ export function JudgeWorkspace() {
   function addCustomAxis(axis: Axis) {
     if (running) return;
     setEvidenceReturn(null);
+    setRemovedCheck(null);
     setCustomAxes((prev) => [...prev, axis]);
     setSelectedIds((prev) => new Set(prev).add(axis.id));
   }
@@ -202,6 +217,11 @@ export function JudgeWorkspace() {
 
   const summary = useMemo(() => (results.length ? buildSummary(results, threshold) : null), [results, threshold]);
   const running = status === "running" || status === "evidence";
+  // A validation error describes the workspace, not a run, so it clears itself
+  // the moment the workspace no longer has that problem.
+  const validationResolved = status === "error" && error?.code === "validation" && !runBlocker;
+  const shownStatus: JudgmentStatus = validationResolved ? "idle" : status;
+  const shownError = validationResolved ? null : error;
   const canReturnToEvidence = evidenceReturn && evidenceReturn.signature === signature && evidenceReturn.runId === runId && status === "done";
 
   function focusWriting() {
@@ -315,12 +335,13 @@ export function JudgeWorkspace() {
           runHint={`${modKey} ↵`}
         />
         <ResultsPanel
-          status={status}
+          status={shownStatus}
           previousRun={previousRun}
           results={results}
           summary={summary}
-          error={error}
+          error={shownError}
           stale={stale}
+          staleMessage={describeStaleness(staleReasons, resultsSimulated, runBlocker)}
           threshold={threshold}
           onThresholdChange={setThreshold}
           onRetry={() => void run()}
