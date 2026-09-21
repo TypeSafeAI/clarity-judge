@@ -17,8 +17,10 @@ type Props = {
   results: AxisResult[];
   summary: Summary | null;
   error: JevErrorPayload | null;
-  /** True when the text or checks changed after the last run. */
+  /** True when the text, checks, or mode changed after the last run. */
   stale: boolean;
+  /** What changed and what to do about it, from describeStaleness. */
+  staleMessage: string;
   threshold: number;
   onThresholdChange: (value: number) => void;
   onRetry: () => void;
@@ -34,7 +36,7 @@ type Props = {
 };
 
 /** Right panel: the verdicts, one card per check, plus the threshold. */
-export function ResultsPanel({ status, previousRun, results, summary, error, stale, threshold, onThresholdChange, onRetry, canRun, onChangeKey, onLocateEvidence, demoMode, resultsSimulated, runId, exportData }: Props) {
+export function ResultsPanel({ status, previousRun, results, summary, error, stale, staleMessage, threshold, onThresholdChange, onRetry, canRun, onChangeKey, onLocateEvidence, demoMode, resultsSimulated, runId, exportData }: Props) {
   const explained = error ? explainError(error) : null;
   const [filter, setFilter] = useState<"all" | "issues" | "review" | "passed">("all");
   const visibleResults = results.filter((result) =>
@@ -140,7 +142,7 @@ export function ResultsPanel({ status, previousRun, results, summary, error, sta
 
         {stale && !running && (
           <div className="notice stale-notice">
-            <span>The text or checks changed. These verdicts reflect the previous run. Run again to refresh them.</span>
+            <span>{staleMessage}</span>
             <button type="button" className="button small" disabled={!canRun} onClick={onRetry}>Run updated judgment</button>
           </div>
         )}
@@ -196,7 +198,10 @@ export function ResultsPanel({ status, previousRun, results, summary, error, sta
             </div>
           </div>
         )}
+      </div>
 
+      {/* The threshold stays in view under the verdicts, next to the counts it changes. */}
+      <div className="panel-threshold">
         <div className="threshold">
           <label htmlFor="judge-threshold">
             Flag anything under <strong>{Math.round(threshold * 100)}%</strong>
@@ -216,12 +221,11 @@ export function ResultsPanel({ status, previousRun, results, summary, error, sta
             <span>Ask for a second look sooner</span>
           </div>
         </div>
+        <p className="panel-footnote">
+          Answer confidence is derived from yes/no probabilities or supplied for the chosen option. It is not a guarantee of accuracy. Flags update instantly without a new request.
+          {demoMode ? " Demo results are simulated." : ""}
+        </p>
       </div>
-
-      <p className="panel-footnote">
-        Answer confidence is derived from yes/no probabilities or supplied for the chosen option. It is not a guarantee of accuracy. Flags update instantly without a new request.
-        {demoMode ? " Demo results are simulated." : ""}
-      </p>
     </section>
   );
 }

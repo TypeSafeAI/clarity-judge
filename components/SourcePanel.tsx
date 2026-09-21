@@ -66,9 +66,22 @@ export function SourcePanel({
 }: Props) {
   const [examplesOpen, setExamplesOpen] = useState(true);
   const [editingAxis, setEditingAxis] = useState<Axis | null>(null);
+  // The name of the check added most recently, so the panel can say so and land focus on its chip.
+  const [addedName, setAddedName] = useState<string | null>(null);
   const editTrigger = useRef<HTMLButtonElement | null>(null);
   const undoRemoval = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  function focusChip(name: string) {
+    const chip = Array.from(panelRef.current?.querySelectorAll<HTMLInputElement>('.field-options input[type="checkbox"]') ?? []).find(
+      (input) => input.getAttribute("aria-label") === name,
+    );
+    chip?.focus();
+  }
+  function addCheck(axis: Axis) {
+    onAddCustom(axis);
+    setAddedName(axis.name);
+    requestAnimationFrame(() => focusChip(axis.name));
+  }
   function finishEditing() {
     setEditingAxis(null);
     requestAnimationFrame(() => {
@@ -142,11 +155,14 @@ export function SourcePanel({
           </div>
           <CheckChips builtInAxes={builtInAxes} customAxes={customAxes} selectedIds={selectedIds} onToggle={onToggle} onRemoveCustom={(id) => {
             if (editingAxis?.id === id) setEditingAxis(null);
+            setAddedName(null);
             onRemoveCustom(id);
             requestAnimationFrame(() => undoRemoval.current?.focus());
           }} onEditCustom={(axis, trigger) => { editTrigger.current = trigger; setEditingAxis(axis); }} />
           <div className="replacement-feedback">
-            <p role="status" aria-atomic="true">{removedCheckName ? `Removed ${removedCheckName}.` : ""}</p>
+            <p role="status" aria-atomic="true">
+              {removedCheckName ? `Removed ${removedCheckName}.` : addedName ? `Added ${addedName}. It's switched on for the next run.` : ""}
+            </p>
             {removedCheckName && <button ref={undoRemoval} type="button" className="button small" aria-label="Undo check removal" onClick={() => {
               onUndoRemoveCustom();
               requestAnimationFrame(() => {
@@ -176,7 +192,7 @@ export function SourcePanel({
               <ChevronDown size={14} className="marker" style={{ marginLeft: "auto" }} />
             </summary>
             <div className="disclosure-body">
-              <CustomAxisBuilder onAdd={onAddCustom} />
+              <CustomAxisBuilder onAdd={addCheck} />
             </div>
           </details>}
 

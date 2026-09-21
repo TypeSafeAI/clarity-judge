@@ -29,8 +29,12 @@ test.describe("API key lifecycle", () => {
     await expect(page.locator(".usage-badge")).toContainText("No run yet");
     await expect(page.getByRole("button", { name: "API key settings" })).toHaveClass(/has-key/);
 
-    // Stale results from the simulated run are still labelled simulated.
+    // Stale results from the simulated run are still labelled simulated, and
+    // the notice says the mode changed rather than blaming the text.
     await expect(page.locator(".verdict-summary .summary-note")).toContainText("Simulated");
+    await expect(page.locator(".stale-notice")).toHaveText(
+      /^You switched to live mode\. These verdicts are still simulated\. Run again for real verdicts from Jev\./,
+    );
 
     const html = await page.content();
     expect(html).not.toContain(FAKE_KEY);
@@ -68,6 +72,27 @@ test.describe("API key lifecycle", () => {
     await page.keyboard.press("Escape");
     await expect(page.locator(".demo-banner")).toBeVisible();
     await expect(page.locator(".usage-badge")).toContainText("Demo");
+    // The failed live run left the simulated verdicts on screen; back in demo mode they match again.
+    await expect(page.locator(".stale-notice")).toHaveCount(0);
+  });
+
+  test("removing the key after a live run warns that a re-run will be simulated", async ({ page }) => {
+    await openJudge(page);
+    await stubJudgeRoute(page, 200, { answers: [{ id: "hedging", type: "noul", value: false, probability: 0.2, confidence: 0.8, needsReview: false }], model: "mock-live" });
+    await page.getByRole("button", { name: "API key settings" }).click();
+    const dialog = page.getByRole("dialog", { name: "Your TypeSafe API key" });
+    await keyInput(page).fill(FAKE_KEY);
+    await dialog.getByRole("button", { name: "Save key" }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Run judgment" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Judgment complete" })).toBeVisible();
+    await expect(page.locator(".stale-notice")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "API key settings" }).click();
+    await dialog.getByRole("button", { name: "Remove from this browser" }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".stale-notice")).toHaveText(/^You switched back to demo mode\. These verdicts came from Jev\. Running again will simulate results\./);
+    await expect(page.locator(".verdict-summary .summary-note")).toContainText("Verdicts from Jev");
   });
 
   test("other upstream failures are explained with a retry", async ({ page }) => {

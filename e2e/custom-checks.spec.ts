@@ -13,6 +13,9 @@ test.describe("custom checks", () => {
 
     const chip = checkChips(page).getByRole("checkbox", { name: "On brand" });
     await expect(chip).toBeChecked();
+    // Saving says so and lands on the new chip, which is above the form and easy to miss.
+    await expect(page.getByRole("status").filter({ hasText: "Added On brand. It's switched on for the next run." })).toBeVisible();
+    await expect(chip).toBeFocused();
     await expect(page.locator(".field-label .count")).toHaveText("8/8 on");
     await page.getByRole("button", { name: "About On brand", exact: true }).click();
     await expect(page.getByRole("region", { name: "On brand check details" })).toContainText("Counts as an issue: Yes");
@@ -29,6 +32,8 @@ test.describe("custom checks", () => {
 
     await page.getByRole("button", { name: "Remove On brand" }).click();
     await expect(checkChips(page).getByRole("checkbox", { name: "On brand" })).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "Removed On brand." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Added On brand" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "On brand check details" })).toHaveCount(0);
     await expect(page.locator(".field-label .count")).toHaveText("7/7 on");
   });

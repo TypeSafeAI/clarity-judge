@@ -62,6 +62,29 @@ test.describe("keyboard", () => {
     await expect(pass).not.toHaveAttribute("open", "");
   });
 
+  test("shortcuts stay inside the key dialog while it is open", async ({ page }) => {
+    await openJudge(page);
+    await page.getByLabel("Paste the text to judge").fill("A changed draft that would run.");
+    await expect(page.locator(".stale-notice")).toBeVisible();
+    await page.getByRole("button", { name: "API key settings" }).click();
+    const dialog = page.getByRole("dialog", { name: "Your TypeSafe API key" });
+    await expect(dialog).toBeVisible();
+
+    // ⌘↵ must not run a judgment behind the dialog: the verdicts stay stale.
+    await page.keyboard.press(`${mod}+Enter`);
+    await expect(page.locator(".stale-notice")).toBeVisible();
+    // ⌘K must not stack the palette on top of it.
+    await page.keyboard.press(`${mod}+k`);
+    await expect(page.getByRole("combobox", { name: "Search commands" })).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await page.keyboard.press(`${mod}+Enter`);
+    await expect(page.getByRole("status").filter({ hasText: "Judgment complete" })).toBeVisible();
+    await expect(page.locator(".stale-notice")).toHaveCount(0);
+  });
+
   test("every probability track is a named meter", async ({ page }) => {
     await openJudge(page);
     await page.getByRole("button", { name: "Expand all" }).click();

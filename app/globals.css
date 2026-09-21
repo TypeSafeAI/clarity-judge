@@ -2128,3 +2128,33 @@ main:has(> .compact-lab) {
   .workspace .input-meta { flex-wrap: wrap; gap: 6px; }
   .workspace-actions .button { font-size: 12px; padding-inline: 10px; }
 }
+
+/* The threshold sits in the results footer, in view next to the counts it changes. */
+.panel-threshold {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+.panel-threshold .threshold {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.panel-threshold .threshold label { grid-column: 1; grid-row: 1; white-space: nowrap; }
+.panel-threshold .threshold input[type="range"] { grid-column: 2; grid-row: 1; margin: 0; }
+.panel-threshold .threshold .input-meta { grid-column: 2; grid-row: 2; margin: 0; }
+.panel-threshold .panel-footnote { padding: 8px 0 0; border-top: 0; }
+@media (max-width: 540px) {
+  .panel-threshold .threshold { grid-template-columns: minmax(0, 1fr); }
+  .panel-threshold .threshold label,
+  .panel-threshold .threshold input[type="range"],
+  .panel-threshold .threshold .input-meta { grid-column: 1; grid-row: auto; }
+}
+/* "Answer confidence" reads as one label instead of breaking across two lines. */
+.workspace .result-confidence { flex-basis: auto; }
+.workspace .result-confidence-label { white-space: nowrap; }
