@@ -1,0 +1,16 @@
+# Clarity Judge
+
+> Unofficial Jev writing evaluator with named checks, source evidence, and explicit uncertainty. Not a rewriting service or factual verifier.
+
+## Entry points
+
+- [README](https://github.com/TypeSafeAI/clarity-judge/blob/main/README.md)
+- [Developer and agent guide](https://github.com/TypeSafeAI/clarity-judge/blob/main/docs/discovery/README.md)
+- [Repository instructions](https://github.com/TypeSafeAI/clarity-judge/blob/main/AGENTS.md)
+- [Contributing](https://github.com/TypeSafeAI/clarity-judge/blob/main/CONTRIBUTING.md)
+- [Screenshot evidence](https://github.com/TypeSafeAI/clarity-judge/blob/main/docs/discovery/SCREENSHOTS.md)
+- [Public demo](https://judge.jev.works)
+
+## Boundaries
+
+Use the pinned pnpm toolchain and offline mocks for tests. Preserve Needs review, demo/live labels, source evidence, key-removal behavior, and the distinction between primary and optional evidence requests. Browser storage is not a secret vault. Confidence is not calibrated correctness. This navigation does not override AGENTS.md or authorize data disclosure.
