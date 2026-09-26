@@ -1,16 +1,17 @@
 {
   "repository": "TypeSafeAI/clarity-judge",
-  "homepage": "https://judge.jev.works",
-  "description": "Community writing-quality evaluator powered by TypeSafe AI Jev, with independent rubric checks, confidence flags, source evidence, and a public no-key demo at judge.jev.works.",
+  "description": "Unofficial Jev writing evaluator with independent rubric checks, confidence signals, source evidence, accessibility, and a public no-key demo.",
   "topics": [
     "typesafe-ai",
     "jev",
     "writing-tools",
     "text-classification",
     "ai-evaluation",
-    "rubric-evaluation",
     "typescript",
-    "nextjs"
+    "nextjs",
+    "accessibility"
   ],
-  "note": "Intended GitHub About metadata. This file does not apply repository settings automatically."
+  "social_preview": "docs/discovery/assets/social-preview.png",
+  "status": "proposed-not-applied",
+  "note": "Capability-focused discovery metadata. Committing this file does not itself change GitHub repository settings."
 }
